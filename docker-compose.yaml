@@ -17,6 +17,12 @@ services:
       - "${BACKEND_PORT:-3000}:3000"
     volumes:
       - ./backend:/app # development volume
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
     restart: unless-stopped
     depends_on:
       - postgres
