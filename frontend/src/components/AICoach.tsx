@@ -20,14 +20,22 @@ export function AICoach({ courseId, moduleIndex }: AICoachProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollViewportRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (scrollViewportRef.current) {
+      const viewport = scrollViewportRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight
+      }
+    }
+  }
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    scrollToBottom()
   }, [messages])
 
   const sendMessage = async () => {
@@ -129,6 +137,9 @@ export function AICoach({ courseId, moduleIndex }: AICoachProps) {
                 }
                 return updated
               })
+
+              // Scroll to bottom during streaming
+              scrollToBottom()
             }
           }
         }
@@ -174,7 +185,7 @@ export function AICoach({ courseId, moduleIndex }: AICoachProps) {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 p-4" ref={scrollViewportRef}>
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-12">
             <Bot className="size-12 mx-auto mb-4 opacity-20" />

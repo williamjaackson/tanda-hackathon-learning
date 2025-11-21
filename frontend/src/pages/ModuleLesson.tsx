@@ -197,6 +197,15 @@ export default function ModuleLesson() {
           )}
         </div>
 
+        {/* AI Learning Coach */}
+        <div className="border-t pt-8 mt-8">
+          <h2 className="text-lg font-semibold mb-4">AI Learning Coach</h2>
+          <AICoach
+            courseId={parseInt(courseId!)}
+            moduleIndex={parseInt(moduleIndex!)}
+          />
+        </div>
+
         {/* Lesson Content */}
         <div className="border-t pt-8">
           <h2 className="text-lg font-semibold mb-4">Lesson Content</h2>
@@ -205,15 +214,6 @@ export default function ModuleLesson() {
               {lesson.lesson_content}
             </p>
           </div>
-        </div>
-
-        {/* AI Learning Coach */}
-        <div className="border-t pt-8 mt-8">
-          <h2 className="text-lg font-semibold mb-4">AI Learning Coach</h2>
-          <AICoach
-            courseId={parseInt(courseId!)}
-            moduleIndex={parseInt(moduleIndex!)}
-          />
         </div>
 
         {/* Navigation */}
