@@ -9,6 +9,7 @@ import CourseDetail from './pages/CourseDetail'
 import CourseTest from './pages/CourseTest'
 import ModuleLesson from './pages/ModuleLesson'
 import ModuleTest from './pages/ModuleTest'
+import ModuleView from './pages/ModuleView'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -52,6 +53,10 @@ const router = createBrowserRouter([
             <ModuleTest />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: 'courses/:courseId/modules/:moduleIndex/view',
+        element: <ModuleView />,
       },
       {
         path: 'courses/:courseId/modules/:moduleIndex',

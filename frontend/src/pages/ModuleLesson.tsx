@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck, Target } from 'lucide-react'
+import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck, Target, QrCode } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import { TestService } from '@/services/test'
 import type { Course } from '@/services/course'
 import type { TestStatus } from '@/services/test'
 import { AICoach } from '@/components/AICoach'
+import { QRCodeDialog } from '@/components/QRCodeDialog'
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
 
@@ -26,6 +27,7 @@ export default function ModuleLesson() {
   const [error, setError] = useState('')
   const [testStatus, setTestStatus] = useState<TestStatus | null>(null)
   const [hasTestQuestions, setHasTestQuestions] = useState<boolean>(false)
+  const [showQRCode, setShowQRCode] = useState(false)
 
   useEffect(() => {
     // Reset state when module changes
@@ -120,6 +122,9 @@ export default function ModuleLesson() {
   const module = course.modules?.[parseInt(moduleIndex!)]
   const isModuleCompleted = testStatus?.passed_modules.includes(parseInt(moduleIndex!)) || false
 
+  // Generate full URL for QR code
+  const shareUrl = `${window.location.origin}/courses/${courseId}/modules/${moduleIndex}/view`
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
       <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -157,14 +162,24 @@ export default function ModuleLesson() {
                 )}
               </div>
             </div>
-            {hasTestQuestions && (
-              <Button asChild variant={isModuleCompleted ? 'outline' : 'yellow'} size="lg">
-                <Link to={`/courses/${courseId}/modules/${moduleIndex}/test`}>
-                  <ClipboardCheck className="size-5 mr-2" />
-                  {isModuleCompleted ? 'Retake Test' : 'Take Test'}
-                </Link>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowQRCode(true)}
+                variant="outline"
+                size="lg"
+              >
+                <QrCode className="size-5 mr-2" />
+                Share
               </Button>
-            )}
+              {hasTestQuestions && (
+                <Button asChild variant={isModuleCompleted ? 'outline' : 'yellow'} size="lg">
+                  <Link to={`/courses/${courseId}/modules/${moduleIndex}/test`}>
+                    <ClipboardCheck className="size-5 mr-2" />
+                    {isModuleCompleted ? 'Retake Test' : 'Take Test'}
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
           {!isModuleCompleted && (
             <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mt-4">
@@ -295,6 +310,14 @@ export default function ModuleLesson() {
         </div>
       </div>
       </div>
+
+      {/* QR Code Dialog */}
+      <QRCodeDialog
+        open={showQRCode}
+        onOpenChange={setShowQRCode}
+        url={shareUrl}
+        moduleName={module?.name || 'Module'}
+      />
     </div>
   )
 }
