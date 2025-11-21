@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from database import init_db_pool, close_db_pool, init_db, reset_db
-from api import example, auth, course
+from api import example, auth, course, test
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,13 +15,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Configure CORS
+# Configure CORS with specific origins
+allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:8080").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 @app.get("/")
@@ -31,3 +33,4 @@ def read_root():
 app.include_router(example.router)
 app.include_router(auth.router, prefix="/api")
 app.include_router(course.router, prefix="/api")
+app.include_router(test.router, prefix="/api")

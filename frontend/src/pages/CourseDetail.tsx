@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ClipboardCheck } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
+import { TestService } from '@/services/test'
 import type { Course, CoursePDF } from '@/services/course'
+import type { TestStatus } from '@/services/test'
 
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -15,18 +17,35 @@ export default function CourseDetail() {
   const [isRetrying, setIsRetrying] = useState(false)
   const [error, setError] = useState('')
   const [showPdfSummaries, setShowPdfSummaries] = useState(false)
+  const [testStatus, setTestStatus] = useState<TestStatus | null>(null)
+  const [hasTestQuestions, setHasTestQuestions] = useState<boolean | null>(null) // null = checking, true/false = result
 
   useEffect(() => {
     const fetchCourseData = async () => {
       if (!courseId) return
 
       try {
-        const [courseData, pdfData] = await Promise.all([
+        const [courseData, pdfData, testStatusData] = await Promise.all([
           CourseService.getCourse(parseInt(courseId)),
-          CourseService.getCoursePDFs(parseInt(courseId))
+          CourseService.getCoursePDFs(parseInt(courseId)),
+          TestService.getTestStatus(parseInt(courseId)).catch(() => ({ has_completed: false, passed_modules: [] }))
         ])
         setCourse(courseData)
         setPdfs(pdfData)
+        setTestStatus(testStatusData)
+
+        // Check if test questions exist when modules are completed
+        if (courseData.modules_status === 'completed') {
+          try {
+            const questions = await TestService.getTestQuestions(parseInt(courseId))
+            setHasTestQuestions(questions.length > 0)
+          } catch {
+            setHasTestQuestions(false)
+          }
+        } else {
+          setHasTestQuestions(null)
+        }
+
         return { courseData, pdfData }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load course')
@@ -43,19 +62,25 @@ export default function CourseDetail() {
     const pollInterval = setInterval(async () => {
       const result = await fetchCourseData()
 
-      // Stop polling if all PDFs have summaries AND modules are completed or errored
+      // Stop polling if all PDFs have summaries AND modules are completed or errored AND test questions are ready
       if (result) {
         const allSummariesComplete = result.pdfData.every(pdf => pdf.summary !== null)
         const modulesStatus = result.courseData.modules_status
 
-        if (allSummariesComplete && (modulesStatus === 'completed' || modulesStatus === 'error')) {
+        // Continue polling if modules are completed but test questions aren't ready yet
+        if (allSummariesComplete && modulesStatus === 'error') {
+          clearInterval(pollInterval)
+        }
+
+        // Stop when modules are completed AND test questions are available
+        if (allSummariesComplete && modulesStatus === 'completed' && hasTestQuestions === true) {
           clearInterval(pollInterval)
         }
       }
     }, 3000)
 
     return () => clearInterval(pollInterval)
-  }, [courseId])
+  }, [courseId, hasTestQuestions])
 
   const handleDelete = async () => {
     if (!courseId || !confirm('Are you sure you want to delete this course?')) {
@@ -153,7 +178,26 @@ export default function CourseDetail() {
 
         {/* Course Modules Section */}
         <div className="border-t pt-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Course Modules</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Course Modules</h2>
+            {course.modules_status === 'completed' && course.modules && course.modules.length > 0 && (
+              <>
+                {hasTestQuestions === true ? (
+                  <Button asChild>
+                    <Link to={`/courses/${courseId}/test`}>
+                      <ClipboardCheck className="size-4 mr-2" />
+                      Take Knowledge Test
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button disabled>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Generating Test...
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Loading State */}
           {course.modules_status === 'generating' && (
@@ -205,28 +249,49 @@ export default function CourseDetail() {
           {/* Course Modules List */}
           {course.modules && course.modules.length > 0 && (
             <div className="space-y-6">
-              {course.modules.map((module, index) => (
-                <div key={index} className="relative">
-                  {/* Connection line */}
-                  {index < course.modules!.length - 1 && (
-                    <div className="absolute left-5 top-14 bottom-0 w-0.5 bg-primary/20 -mb-6"></div>
-                  )}
+              {course.modules.map((module, index) => {
+                const isCompleted = testStatus?.passed_modules.includes(index) || false
 
-                  <div className="border rounded-lg p-6 bg-white hover:shadow-sm transition-shadow relative">
-                    <div className="flex items-start gap-4">
-                      <div className="flex items-center justify-center size-10 rounded-full bg-primary text-white text-sm font-bold flex-shrink-0 relative z-10">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-xl mb-3">{module.name}</h3>
-                        <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
-                          {module.content}
-                        </p>
+                return (
+                  <div key={index} className="relative">
+                    {/* Connection line */}
+                    {index < course.modules!.length - 1 && (
+                      <div className="absolute left-5 top-14 bottom-0 w-0.5 bg-primary/20 -mb-6"></div>
+                    )}
+
+                    <div className={`border rounded-lg p-6 transition-all relative ${
+                      isCompleted
+                        ? 'bg-green-50 border-green-300 hover:shadow-md'
+                        : 'bg-white hover:shadow-sm'
+                    }`}>
+                      <div className="flex items-start gap-4">
+                        <div className={`flex items-center justify-center size-10 rounded-full text-sm font-bold flex-shrink-0 relative z-10 ${
+                          isCompleted
+                            ? 'bg-green-600 text-white'
+                            : 'bg-primary text-white'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="font-semibold text-xl">{module.name}</h3>
+                            {isCompleted && (
+                              <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                                ✓ Completed
+                              </span>
+                            )}
+                          </div>
+                          <p className={`whitespace-pre-line leading-relaxed ${
+                            isCompleted ? 'text-green-900/70' : 'text-muted-foreground'
+                          }`}>
+                            {module.content}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -235,7 +300,7 @@ export default function CourseDetail() {
             <div className="flex items-center gap-3 p-6 border rounded-lg bg-accent/5">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
               <p className="text-muted-foreground">
-                Waiting for PDF summaries to complete before generating modules...
+                Waiting for PDF processing to complete before generating modules...
               </p>
             </div>
           )}
@@ -255,12 +320,12 @@ export default function CourseDetail() {
                 {showPdfSummaries ? (
                   <>
                     <ChevronUp className="size-4 mr-1" />
-                    Hide Summaries
+                    Hide Details
                   </>
                 ) : (
                   <>
                     <ChevronDown className="size-4 mr-1" />
-                    Show Summaries
+                    Show Details
                   </>
                 )}
               </Button>
@@ -278,7 +343,7 @@ export default function CourseDetail() {
                       {!pdf.summary && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                           <Loader2 className="size-3 animate-spin" />
-                          <span>Generating summary...</span>
+                          <span>Processing...</span>
                         </div>
                       )}
                     </div>
@@ -286,7 +351,7 @@ export default function CourseDetail() {
                   {showPdfSummaries && pdf.summary && (
                     <div className="mt-3 pt-3 border-t">
                       <h4 className="text-xs font-semibold text-muted-foreground mb-2">
-                        AI Summary
+                        Content Overview
                       </h4>
                       <p className="text-sm text-muted-foreground whitespace-pre-line">
                         {pdf.summary}
