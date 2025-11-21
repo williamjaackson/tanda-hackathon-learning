@@ -1,35 +1,38 @@
 import { Outlet, Link } from 'react-router-dom'
+import { Button } from './ui/button'
+import { GraduationCap, LayoutDashboard, LogIn } from 'lucide-react'
 
 export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
-        <nav className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold">
-              Tanda Hackathon
+      <header className="fixed w-full bg-white">
+        <nav className="flex items-center justify-between p-4">
+          <Button asChild variant="ghost">
+            <Link to="/">
+              <GraduationCap className="size-5" />
+              <span className="text-lg font-medium">Cogni.lol</span>
             </Link>
-            <div className="flex gap-6">
-              <Link to="/" className="hover:underline">
-                Home
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild>
+              <Link to="/dashboard">
+                <LayoutDashboard className="size-4" />
+                Dashboard
               </Link>
-              <Link to="/about" className="hover:underline">
-                About
+            </Button>
+            <Button variant="outline" asChild className="rounded-full">
+              <Link to="/login">
+                <LogIn className="size-4" />
+                Login
               </Link>
-            </div>
+            </Button>
           </div>
         </nav>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="bg-slate-100 flex-1 min-h-screen mt-18 pt-6">
         <Outlet />
       </main>
-
-      <footer className="border-t py-4">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          Tanda Hackathon Learning Project
-        </div>
-      </footer>
     </div>
   )
 }

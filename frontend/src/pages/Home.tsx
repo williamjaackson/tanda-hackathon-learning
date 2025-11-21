@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import reactLogo from '../assets/react.svg'
 import viteLogo from '/vite.svg'
 import { Button } from '@/components/ui/button'
+import { CheckCircle, XCircle, Plus } from 'lucide-react'
 
 export default function Home() {
   const [count, setCount] = useState(0)
@@ -30,14 +31,21 @@ export default function Home() {
 
       <div className="mb-6">
         {backendConnected ? (
-          <p className="text-green-600 font-semibold">✓ Backend connected</p>
+          <div className="flex items-center gap-2 text-green-600 font-semibold">
+            <CheckCircle className="size-5" />
+            <span>Backend connected</span>
+          </div>
         ) : (
-          <p className="text-red-600 font-semibold">✗ Backend not connected</p>
+          <div className="flex items-center gap-2 text-red-600 font-semibold">
+            <XCircle className="size-5" />
+            <span>Backend not connected</span>
+          </div>
         )}
       </div>
 
       <div className="card">
-        <Button onClick={() => setCount((count) => count + 1)}>
+        <Button onClick={() => setCount((count) => count + 1)} size="lg">
+          <Plus className="size-5" />
           Click me {count}
         </Button>
         <p className="mt-4 text-gray-600">
