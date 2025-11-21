@@ -1,6 +1,6 @@
 import { Outlet, Link } from 'react-router-dom'
 import { Button } from './ui/button'
-import { GraduationCap, LayoutDashboard, LogIn } from 'lucide-react'
+import { GraduationCap, BookOpen, LogIn } from 'lucide-react'
 
 export default function Layout() {
   return (
@@ -15,9 +15,9 @@ export default function Layout() {
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
-              <Link to="/dashboard">
-                <LayoutDashboard className="size-4" />
-                Dashboard
+              <Link to="/courses">
+                <BookOpen className="size-4" />
+                Courses
               </Link>
             </Button>
             <Button variant="outline" asChild className="rounded-full">
