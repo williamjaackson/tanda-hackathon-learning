@@ -225,9 +225,6 @@ export function AICoach({ courseId, moduleIndex }: AICoachProps) {
             ))}
             {isStreaming && messages[messages.length - 1]?.role === 'assistant' && messages[messages.length - 1]?.content === '' && (
               <div className="flex gap-3">
-                <div className="flex items-center justify-center size-8 rounded-full bg-primary text-white flex-shrink-0">
-                  <Bot className="size-4" />
-                </div>
                 <div className="bg-accent/10 rounded-lg px-4 py-2">
                   <Loader2 className="size-4 animate-spin text-primary" />
                 </div>

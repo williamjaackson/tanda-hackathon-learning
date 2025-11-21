@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ClipboardCheck, Trophy, Target, Sparkles } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import { TestService } from '@/services/test'
@@ -135,63 +135,114 @@ export default function CourseDetail() {
     )
   }
 
-  return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link to="/courses">
-          <ArrowLeft className="size-4" />
-          Back to Courses
-        </Link>
-      </Button>
+  const completedModules = testStatus?.passed_modules.length || 0
+  const totalModules = course?.modules?.length || 0
+  const progressPercent = totalModules > 0 ? (completedModules / totalModules) * 100 : 0
+  const isFullyCompleted = totalModules > 0 && completedModules === totalModules
 
-      <div className="bg-white border rounded-lg p-8">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-primary/10 rounded-lg">
-              <BookOpen className="size-8 text-primary" />
-            </div>
-            <div>
-              <div className="font-mono text-sm text-muted-foreground mb-1">
-                {course.code}
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link to="/courses">
+            <ArrowLeft className="size-4" />
+            Back to Courses
+          </Link>
+        </Button>
+
+        {/* Hero Header with Progress */}
+        <div className="bg-white border-2 border-yellow-200 rounded-3xl p-8 mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="p-4 bg-yellow-100 rounded-2xl">
+                <BookOpen className="size-12 text-yellow-600" />
               </div>
-              <h1 className="text-3xl font-bold">{course.name}</h1>
+              <div className="flex-1">
+                <div className="font-mono text-sm text-yellow-600 font-semibold mb-1">
+                  {course.code}
+                </div>
+                <h1 className="text-4xl font-bold mb-2">{course.name}</h1>
+                {course.description && (
+                  <p className="text-muted-foreground">{course.description}</p>
+                )}
+              </div>
             </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="text-destructive hover:bg-destructive hover:text-white"
+            >
+              <Trash2 className="size-4" />
+            </Button>
           </div>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="text-destructive hover:bg-destructive hover:text-white"
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          {/* Progress Section */}
+          {totalModules > 0 && (
+            <div className="border-t-2 border-yellow-100 pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="size-5 text-yellow-600" />
+                  <span className="font-semibold text-lg">Your Progress</span>
+                </div>
+                <span className="text-2xl font-bold">
+                  {completedModules}/{totalModules}
+                  <span className="text-sm text-muted-foreground ml-2">
+                    ({Math.round(progressPercent)}%)
+                  </span>
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden mb-4">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    isFullyCompleted ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              {isFullyCompleted && (
+                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
+                  <Trophy className="size-8 text-green-600" />
+                  <div>
+                    <p className="font-bold text-green-900 text-lg">
+                      Course Mastered!
+                    </p>
+                    <p className="text-green-700 text-sm">
+                      Amazing work! You've completed all modules in this course.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!isFullyCompleted && completedModules > 0 && (
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 flex items-center gap-3">
+                  <Sparkles className="size-6 text-yellow-600" />
+                  <p className="text-yellow-900 font-medium">
+                    Great progress! Keep going to master this course.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {course.description && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Description</h2>
-            <p className="text-muted-foreground">{course.description}</p>
-          </div>
-        )}
-
         {/* Course Modules Section */}
-        <div className="border-t pt-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Course Modules</h2>
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Course Modules</h2>
             {course.modules_status === 'completed' && course.modules && course.modules.length > 0 && (
               <>
                 {hasTestQuestions === true ? (
-                  <Button asChild>
+                  <Button asChild variant="yellow" size="lg">
                     <Link to={`/courses/${courseId}/test`}>
-                      <ClipboardCheck className="size-4 mr-2" />
-                      Take Knowledge Test
+                      <ClipboardCheck className="size-5 mr-2" />
+                      Take Final Test
                     </Link>
                   </Button>
                 ) : (
-                  <Button disabled>
-                    <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Button disabled size="lg">
+                    <Loader2 className="size-5 mr-2 animate-spin" />
                     Generating Test...
                   </Button>
                 )}
@@ -248,40 +299,57 @@ export default function CourseDetail() {
 
           {/* Course Modules List */}
           {course.modules && course.modules.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {course.modules.map((module, index) => {
                 const isCompleted = testStatus?.passed_modules.includes(index) || false
+                const isNextToComplete = !isCompleted && completedModules === index
 
                 return (
                   <div key={index} className="relative">
                     {/* Connection line */}
                     {index < course.modules!.length - 1 && (
-                      <div className="absolute left-5 top-14 bottom-0 w-0.5 bg-primary/20 -mb-6"></div>
+                      <div className={`absolute left-7 top-20 bottom-0 w-1 -mb-4 ${
+                        isCompleted ? 'bg-green-300' : 'bg-slate-200'
+                      }`}></div>
                     )}
 
                     <Link to={`/courses/${courseId}/modules/${index}`}>
-                      <div className={`border rounded-lg p-6 transition-all relative cursor-pointer ${
+                      <div className={`group border-2 rounded-2xl p-6 transition-all relative cursor-pointer hover:-translate-y-1 ${
                         isCompleted
-                          ? 'bg-green-50 border-green-300 hover:shadow-md'
-                          : 'bg-white hover:shadow-md'
+                          ? 'bg-green-50 border-green-300 hover:border-green-400 hover:shadow-lg'
+                          : isNextToComplete
+                          ? 'bg-yellow-50 border-yellow-300 hover:border-yellow-400 hover:shadow-lg'
+                          : 'bg-white border-slate-200 hover:border-yellow-300 hover:shadow-lg'
                       }`}>
                         <div className="flex items-center gap-4">
-                          <div className={`flex items-center justify-center size-10 rounded-full text-sm font-bold flex-shrink-0 relative z-10 ${
+                          <div className={`flex items-center justify-center size-14 rounded-2xl text-lg font-bold flex-shrink-0 relative z-10 transition-transform group-hover:scale-110 ${
                             isCompleted
                               ? 'bg-green-600 text-white'
+                              : isNextToComplete
+                              ? 'bg-yellow-500 text-black'
                               : 'bg-primary text-white'
                           }`}>
-                            {index + 1}
+                            {isCompleted ? '✓' : index + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-xl">{module.name}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-xl group-hover:text-yellow-600 transition-colors">
+                                {module.name}
+                              </h3>
                               {isCompleted && (
-                                <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                                <span className="text-xs font-bold text-green-700 bg-green-200 px-3 py-1 rounded-full">
                                   ✓ Completed
                                 </span>
                               )}
+                              {isNextToComplete && (
+                                <span className="text-xs font-bold text-yellow-700 bg-yellow-200 px-3 py-1 rounded-full animate-pulse">
+                                  → Start Here
+                                </span>
+                              )}
                             </div>
+                            <p className="text-sm text-muted-foreground">
+                              Click to {isCompleted ? 'review' : 'start'} this module
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -305,9 +373,9 @@ export default function CourseDetail() {
 
         {/* Course Materials / PDFs Section */}
         {pdfs.length > 0 && (
-          <div className="border-t pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Source Materials</h2>
+          <div className="bg-white border-2 border-slate-200 rounded-3xl p-8 mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Source Materials</h2>
               <Button
                 variant="ghost"
                 size="sm"

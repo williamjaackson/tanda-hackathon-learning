@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Loader2, CheckCircle2, XCircle, AlertCircle, Trophy, Target, Sparkles } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
 import { TestService } from '@/services/test'
 import { CourseService } from '@/services/course'
 import type { TestQuestion, AnswerSubmission, ModuleTestResult } from '@/services/test'
@@ -9,7 +9,7 @@ import type { Course } from '@/services/course'
 
 export default function ModuleTest() {
   const { courseId, moduleIndex } = useParams<{ courseId: string; moduleIndex: string }>()
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const [course, setCourse] = useState<Course | null>(null)
   const [questions, setQuestions] = useState<TestQuestion[]>([])
   const [answers, setAnswers] = useState<Record<number, number>>({}) // questionId -> selectedOptionIndex (-1 for unsure)
@@ -127,69 +127,114 @@ export default function ModuleTest() {
 
   if (hasSubmitted && testResult) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-8">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
-            <ArrowLeft className="size-4" />
-            Back to Module
-          </Link>
-        </Button>
+      <div className="min-h-screen">
+        <div className="container mx-auto max-w-4xl px-4 py-8">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
+              <ArrowLeft className="size-4" />
+              Back to Module
+            </Link>
+          </Button>
 
-        <div className="bg-white border rounded-lg p-8">
-          <h1 className="text-3xl font-bold mb-6">Test Results</h1>
-
-          <div
-            className={`border rounded-lg p-6 mb-6 ${
-              testResult.is_passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              {testResult.is_passed ? (
-                <CheckCircle2 className="size-8 text-green-600 flex-shrink-0" />
-              ) : (
-                <XCircle className="size-8 text-red-600 flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-xl mb-1">{module?.name}</h3>
-                <p className={`text-lg ${testResult.is_passed ? 'text-green-700' : 'text-red-700'}`}>
-                  {testResult.correct} out of {testResult.total} questions correct
-                </p>
-                {testResult.is_passed ? (
-                  <p className="text-sm text-green-600 font-medium mt-2">
-                    ✓ Module completed successfully! Great work!
-                  </p>
-                ) : (
-                  <p className="text-sm text-red-600 font-medium mt-2">
-                    You need to answer all questions correctly to complete this module.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button asChild variant="outline">
-              <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
-                Back to Module
-              </Link>
-            </Button>
+          <div className="bg-white border-2 border-yellow-200 rounded-3xl p-10">
             {testResult.is_passed ? (
-              <Button asChild className="flex-1">
-                <Link to={`/courses/${courseId}`}>
-                  View Course Progress
-                </Link>
-              </Button>
+              <>
+                {/* Success Celebration */}
+                <div className="text-center mb-8">
+                  <div className="bg-yellow-100 p-6 rounded-full w-fit mx-auto mb-4 animate-bounce">
+                    <Trophy className="size-16 text-yellow-600" />
+                  </div>
+                  <h1 className="text-5xl font-bold mb-3">
+                    <span className="text-yellow-500">Amazing!</span> You Did It!
+                  </h1>
+                  <p className="text-xl text-muted-foreground">
+                    Perfect score on this module!
+                  </p>
+                </div>
+
+                <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 mb-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <CheckCircle2 className="size-12 text-green-600" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-2xl mb-1">{module?.name}</h3>
+                      <p className="text-lg text-green-700 font-semibold">
+                        {testResult.correct}/{testResult.total} questions correct
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border-2 border-green-200">
+                    <p className="text-green-900 font-medium flex items-center gap-2">
+                      <Sparkles className="size-5 text-green-600" />
+                              Keep up this momentum! You're on your way to mastering this course.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button asChild variant="outline" size="lg" className="flex-1">
+                    <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
+                      Review Module
+                    </Link>
+                  </Button>
+                  <Button asChild variant="yellow" size="lg" className="flex-1 text-lg">
+                    <Link to={`/courses/${courseId}`}>
+                      Continue Learning →
+                    </Link>
+                  </Button>
+                </div>
+              </>
             ) : (
-              <Button
-                onClick={() => {
-                  setHasSubmitted(false)
-                  setTestResult(null)
-                  setAnswers({})
-                }}
-                className="flex-1"
-              >
-                Retake Test
-              </Button>
+              <>
+                {/* Encouragement for Retry */}
+                <div className="text-center mb-8">
+                  <div className="bg-red-100 p-6 rounded-full w-fit mx-auto mb-4">
+                    <Target className="size-16 text-red-600" />
+                  </div>
+                  <h1 className="text-4xl font-bold mb-3">
+                    <span className="text-yellow-500">Almost There!</span>
+                  </h1>
+                  <p className="text-xl text-muted-foreground">
+                    You're making progress. Let's try again!
+                  </p>
+                </div>
+
+                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 mb-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <XCircle className="size-12 text-red-600 " />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-2xl mb-1">{module?.name}</h3>
+                      <p className="text-lg text-red-700 font-semibold">
+                        {testResult.correct}/{testResult.total} questions correct
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border-2 border-red-200">
+                    <p className="text-red-900 font-medium">
+                      You need all questions correct to pass. Review the module material and try again when you're ready!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button asChild variant="outline" size="lg" className="flex-1">
+                    <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
+                      Review Module
+                    </Link>
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setHasSubmitted(false)
+                      setTestResult(null)
+                      setAnswers({})
+                    }}
+                    variant="yellow"
+                    size="lg"
+                    className="flex-1 text-lg"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -198,85 +243,121 @@ export default function ModuleTest() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
-          <ArrowLeft className="size-4" />
-          Back to Module
-        </Link>
-      </Button>
+    <div className="min-h-screen">
+      <div className="container mx-auto max-w-4xl px-4 py-8">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link to={`/courses/${courseId}/modules/${moduleIndex}`}>
+            <ArrowLeft className="size-4" />
+            Back to Module
+          </Link>
+        </Button>
 
-      <div className="bg-white border rounded-lg p-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center size-10 rounded-full bg-primary text-white text-sm font-bold">
-              {parseInt(moduleIndex!) + 1}
+        <div className="bg-white border-2 border-yellow-200 rounded-3xl p-8">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <div className="bg-yellow-100 p-4 rounded-2xl w-fit mx-auto mb-4">
+              <div className="flex items-center justify-center size-12 rounded-xl bg-yellow-500 text-white text-xl font-bold">
+                {parseInt(moduleIndex!) + 1}
+              </div>
             </div>
-            <h1 className="text-3xl font-bold">Module Test</h1>
+            <h1 className="text-4xl font-bold mb-3">
+              Module <span className="text-yellow-500">Test</span>
+            </h1>
+            <p className="text-xl text-muted-foreground mb-2">
+              {module?.name}
+            </p>
+            <p className="text-muted-foreground">
+              Answer all questions correctly to complete this module
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            {module?.name} - Answer all questions correctly to complete this module
-          </p>
-        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="size-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="size-5 text-red-600  mt-0.5" />
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
         <div className="space-y-6">
-          {questions.map((question, index) => (
-            <div key={question.id} className="border rounded-lg p-6 bg-accent/5">
-              <h3 className="font-semibold mb-4">
-                {index + 1}. {question.question_text}
-              </h3>
-
-              <div className="space-y-3 mb-4">
-                {question.options.map((option, optIndex) => (
-                  <label
-                    key={optIndex}
-                    className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                      answers[question.id] === optIndex
-                        ? 'bg-primary/10 border-primary'
-                        : 'hover:bg-accent/20'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${question.id}`}
-                      checked={answers[question.id] === optIndex}
-                      onChange={() => handleAnswerChange(question.id, optIndex)}
-                      className="size-4"
-                    />
-                    <span className="flex-1">{option}</span>
-                  </label>
-                ))}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUnsureClick(question.id)}
-                className={answers[question.id] === -1 ? 'bg-accent' : ''}
+          {questions.map((question, index) => {
+            const isAnswered = answers[question.id] !== undefined
+            return (
+              <div
+                key={question.id}
+                className={`border-2 rounded-2xl p-6 transition-all ${
+                  isAnswered
+                    ? 'bg-yellow-50 border-yellow-300'
+                    : 'bg-white border-slate-200'
+                }`}
               >
-                {answers[question.id] === -1 ? '✓ ' : ''}I'm unsure
-              </Button>
-            </div>
-          ))}
+                <div className="flex items-start gap-3 mb-4">
+                  <div className={`flex items-center justify-center size-8 rounded-lg text-sm font-bold  ${
+                    isAnswered ? 'bg-yellow-500 text-black' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <h3 className="font-semibold text-lg flex-1">
+                    {question.question_text}
+                  </h3>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  {question.options.map((option, optIndex) => (
+                    <label
+                      key={optIndex}
+                      className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        answers[question.id] === optIndex
+                          ? 'bg-yellow-500 border-yellow-500 text-black font-semibold scale-[1.02]'
+                          : 'bg-white border-slate-200 hover:border-yellow-300 hover:bg-yellow-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${question.id}`}
+                        checked={answers[question.id] === optIndex}
+                        onChange={() => handleAnswerChange(question.id, optIndex)}
+                        className="size-5"
+                      />
+                      <span className="flex-1">{option}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUnsureClick(question.id)}
+                  className={answers[question.id] === -1 ? 'bg-slate-200' : ''}
+                >
+                  {answers[question.id] === -1 ? '✓ ' : ''}I'm unsure
+                </Button>
+              </div>
+            )
+          })}
         </div>
 
-        <div className="mt-8 pt-8 border-t">
+        <div className="mt-8 pt-8 border-t-2 border-yellow-200">
+          <div className="mb-4 text-center">
+            <p className="text-lg font-semibold mb-2">
+              {Object.keys(answers).length} of {questions.length} questions answered
+            </p>
+            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden max-w-md mx-auto">
+              <div
+                className="h-full bg-yellow-500 rounded-full transition-all"
+                style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
+              />
+            </div>
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || Object.keys(answers).length < questions.length}
-            className="w-full"
+            variant="yellow"
+            className="w-full text-lg"
             size="lg"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
+                <Loader2 className="size-5 mr-2 animate-spin" />
                 Submitting...
               </>
             ) : (
@@ -284,12 +365,13 @@ export default function ModuleTest() {
             )}
           </Button>
           {Object.keys(answers).length < questions.length && (
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              {questions.length - Object.keys(answers).length} question(s) remaining
+            <p className="text-sm text-muted-foreground text-center mt-3">
+              Answer all questions to submit
             </p>
           )}
         </div>
       </div>
+    </div>
     </div>
   )
 }

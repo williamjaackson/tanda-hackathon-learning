@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck, Target } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import { TestService } from '@/services/test'
@@ -121,57 +121,73 @@ export default function ModuleLesson() {
   const isModuleCompleted = testStatus?.passed_modules.includes(parseInt(moduleIndex!)) || false
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link to={`/courses/${courseId}`}>
-          <ArrowLeft className="size-4" />
-          Back to Course
-        </Link>
-      </Button>
+    <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+      <div className="container mx-auto max-w-5xl px-4 py-8">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link to={`/courses/${courseId}`}>
+            <ArrowLeft className="size-4" />
+            Back to Course
+          </Link>
+        </Button>
 
-      <div className="bg-white border rounded-lg p-8">
-        {/* Module Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center justify-center size-10 rounded-full text-white text-sm font-bold ${
-                isModuleCompleted ? 'bg-green-600' : 'bg-primary'
+        {/* Module Header Card */}
+        <div className={`border-2 rounded-3xl p-8 mb-8 ${
+          isModuleCompleted
+            ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300'
+            : 'bg-white border-yellow-200'
+        }`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className={`flex items-center justify-center size-16 rounded-2xl text-2xl font-bold transition-transform hover:scale-110 ${
+                isModuleCompleted ? 'bg-green-600 text-white' : 'bg-yellow-500 text-black'
               }`}>
-                {parseInt(moduleIndex!) + 1}
+                {isModuleCompleted ? '✓' : parseInt(moduleIndex!) + 1}
               </div>
               <div>
-                <h1 className="text-3xl font-bold">{module?.name}</h1>
+                <p className="text-sm font-semibold text-yellow-600 mb-1">
+                  {course.name}
+                </p>
+                <h1 className="text-4xl font-bold mb-2">{module?.name}</h1>
                 {isModuleCompleted && (
-                  <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full mt-1 inline-block">
-                    ✓ Completed
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-green-700 bg-green-200 px-3 py-1 rounded-full">
+                      ✓ Completed
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
             {hasTestQuestions && (
-              <Button asChild>
+              <Button asChild variant={isModuleCompleted ? 'outline' : 'yellow'} size="lg">
                 <Link to={`/courses/${courseId}/modules/${moduleIndex}/test`}>
-                  <ClipboardCheck className="size-4 mr-2" />
+                  <ClipboardCheck className="size-5 mr-2" />
                   {isModuleCompleted ? 'Retake Test' : 'Take Test'}
                 </Link>
               </Button>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {course.name} - Module {parseInt(moduleIndex!) + 1}
-          </p>
+          {!isModuleCompleted && (
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mt-4">
+              <p className="text-yellow-900 font-medium flex items-center gap-2">
+                <Target className="size-5 text-yellow-600" />
+                Complete the test to master this module and continue your learning journey!
+              </p>
+            </div>
+          )}
         </div>
 
+        <div className="space-y-8">
+
         {/* Video Section */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">Video Lesson</h2>
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-8">
+          <h2 className="text-2xl font-bold mb-6">Video Lesson</h2>
 
           {lesson.video_status === 'generating' && (
-            <div className="aspect-video border rounded-lg bg-accent/10 flex items-center justify-center">
+            <div className="aspect-video border-2 border-yellow-200 rounded-2xl bg-yellow-50 flex items-center justify-center">
               <div className="text-center">
-                <Loader2 className="size-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="font-medium">Generating video lesson...</p>
-                <p className="text-sm text-muted-foreground mt-2">
+                <Loader2 className="size-16 animate-spin text-yellow-600 mx-auto mb-4" />
+                <p className="font-bold text-xl">Generating your video lesson...</p>
+                <p className="text-muted-foreground mt-2">
                   This may take a few minutes
                 </p>
               </div>
@@ -179,28 +195,28 @@ export default function ModuleLesson() {
           )}
 
           {lesson.video_status === 'error' && (
-            <div className="aspect-video border rounded-lg bg-red-50 border-red-200 flex items-center justify-center">
+            <div className="aspect-video border-2 border-red-300 rounded-2xl bg-red-50 flex items-center justify-center">
               <div className="text-center p-6">
-                <AlertCircle className="size-12 text-red-600 mx-auto mb-4" />
-                <p className="font-medium text-red-900 mb-2">Failed to generate video</p>
+                <AlertCircle className="size-16 text-red-600 mx-auto mb-4" />
+                <p className="font-bold text-xl text-red-900 mb-2">Failed to generate video</p>
                 {lesson.video_error && (
                   <p className="text-sm text-red-700 mt-2 mb-4">{lesson.video_error}</p>
                 )}
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={handleRetryVideo}
                   disabled={isRetrying}
                   className="border-red-300 text-red-700 hover:bg-red-100"
                 >
                   {isRetrying ? (
                     <>
-                      <Loader2 className="size-4 mr-2 animate-spin" />
+                      <Loader2 className="size-5 mr-2 animate-spin" />
                       Retrying...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="size-4 mr-2" />
+                      <RefreshCw className="size-5 mr-2" />
                       Retry Video Generation
                     </>
                   )}
@@ -210,7 +226,7 @@ export default function ModuleLesson() {
           )}
 
           {lesson.video_status === 'completed' && lesson.video_url && (
-            <div className="aspect-video border rounded-lg overflow-hidden bg-black">
+            <div className="aspect-video border-2 border-slate-200 rounded-2xl overflow-hidden bg-black">
               <video
                 key={`${courseId}-${moduleIndex}`}
                 controls
@@ -223,18 +239,18 @@ export default function ModuleLesson() {
           )}
 
           {lesson.video_status === 'pending' && (
-            <div className="aspect-video border rounded-lg bg-accent/10 flex items-center justify-center">
+            <div className="aspect-video border-2 border-slate-200 rounded-2xl bg-slate-50 flex items-center justify-center">
               <div className="text-center">
-                <PlayCircle className="size-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Video will be generated soon...</p>
+                <PlayCircle className="size-16 text-slate-400 mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">Video will be generated soon...</p>
               </div>
             </div>
           )}
         </div>
 
         {/* AI Learning Coach */}
-        <div className="border-t pt-8 mt-8">
-          <h2 className="text-lg font-semibold mb-4">AI Learning Coach</h2>
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-8">
+          <h2 className="text-2xl font-bold mb-4">AI Learning Coach</h2>
           <AICoach
             courseId={parseInt(courseId!)}
             moduleIndex={parseInt(moduleIndex!)}
@@ -242,32 +258,42 @@ export default function ModuleLesson() {
         </div>
 
         {/* Lesson Content */}
-        <div className="border-t pt-8">
-          <h2 className="text-lg font-semibold mb-4">Lesson Content</h2>
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-8">
+          <h2 className="text-2xl font-bold mb-6">Lesson Content</h2>
           <div className="prose prose-sm max-w-none">
-            <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
+            <p className="text-muted-foreground whitespace-pre-line leading-relaxed text-lg">
               {lesson.lesson_content}
             </p>
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="flex gap-3 mt-8 pt-8 border-t">
-          {parseInt(moduleIndex!) > 0 && (
-            <Button variant="outline" asChild>
-              <Link to={`/courses/${courseId}/modules/${parseInt(moduleIndex!) - 1}`}>
-                Previous Module
-              </Link>
-            </Button>
-          )}
-          {course.modules && parseInt(moduleIndex!) < course.modules.length - 1 && (
-            <Button asChild className="ml-auto">
-              <Link to={`/courses/${courseId}/modules/${parseInt(moduleIndex!) + 1}`}>
-                Next Module
-              </Link>
-            </Button>
-          )}
+        <div className="bg-white border-2 border-yellow-200 rounded-3xl p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center">Continue Your Journey</h2>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {parseInt(moduleIndex!) > 0 && (
+              <Button variant="outline" size="lg" asChild className="flex-1">
+                <Link to={`/courses/${courseId}/modules/${parseInt(moduleIndex!) - 1}`}>
+                  ← Previous Module
+                </Link>
+              </Button>
+            )}
+            {course.modules && parseInt(moduleIndex!) < course.modules.length - 1 ? (
+              <Button asChild variant="yellow" size="lg" className="flex-1 text-lg">
+                <Link to={`/courses/${courseId}/modules/${parseInt(moduleIndex!) + 1}`}>
+                  Next Module →
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild variant="yellow" size="lg" className="flex-1 text-lg">
+                <Link to={`/courses/${courseId}`}>
+                  Back to Course
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
       </div>
     </div>
   )
