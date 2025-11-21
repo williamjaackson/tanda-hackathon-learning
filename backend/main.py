@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from pathlib import Path
 from database import init_db_pool, close_db_pool, init_db, reset_db
-from api import example, auth, course, test, chat
+from api import example, auth, course, test, chat, leaderboard
 import os
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(course.router, prefix="/api")
 app.include_router(test.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(leaderboard.router, prefix="/api")
 
 # Create static directory if it doesn't exist
 static_dir = Path("static")

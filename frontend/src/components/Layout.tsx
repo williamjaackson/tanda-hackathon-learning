@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
-import { GraduationCap, BookOpen, LogIn, LogOut, User } from 'lucide-react'
+import { GraduationCap, BookOpen, LogIn, LogOut, User, Trophy } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Layout() {
@@ -23,12 +23,20 @@ export default function Layout() {
           </Button>
           <div className="flex items-center gap-2">
             {isAuthenticated && (
-              <Button variant="ghost" asChild>
-                <Link to="/courses">
-                  <BookOpen className="size-4" />
-                  Courses
-                </Link>
-              </Button>
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/courses">
+                    <BookOpen className="size-4" />
+                    Courses
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link to="/leaderboard">
+                    <Trophy className="size-4" />
+                    Leaderboard
+                  </Link>
+                </Button>
+              </>
             )}
 
             {isAuthenticated ? (

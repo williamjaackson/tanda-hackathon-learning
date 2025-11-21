@@ -10,6 +10,7 @@ import CourseTest from './pages/CourseTest'
 import ModuleLesson from './pages/ModuleLesson'
 import ModuleTest from './pages/ModuleTest'
 import ModuleView from './pages/ModuleView'
+import Leaderboard from './pages/Leaderboard'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -71,6 +72,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <CourseTest />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'leaderboard',
+        element: (
+          <ProtectedRoute>
+            <Leaderboard />
           </ProtectedRoute>
         ),
       },
