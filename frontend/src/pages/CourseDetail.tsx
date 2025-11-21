@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ClipboardCheck, Trophy, Target, Sparkles } from 'lucide-react'
+import { ArrowLeft, BookOpen, Trash2, FileText, Loader2, ChevronDown, ChevronUp, AlertCircle, RefreshCw, ClipboardCheck, Trophy, Target, Sparkles, Award } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import { TestService } from '@/services/test'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Course, CoursePDF } from '@/services/course'
 import type { TestStatus } from '@/services/test'
+import { CertificateDialog } from '@/components/CertificateDialog'
 
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [pdfs, setPdfs] = useState<CoursePDF[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -19,6 +22,7 @@ export default function CourseDetail() {
   const [showPdfSummaries, setShowPdfSummaries] = useState(false)
   const [testStatus, setTestStatus] = useState<TestStatus | null>(null)
   const [hasTestQuestions, setHasTestQuestions] = useState<boolean | null>(null) // null = checking, true/false = result
+  const [showCertificate, setShowCertificate] = useState(false)
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -203,16 +207,27 @@ export default function CourseDetail() {
                 />
               </div>
               {isFullyCompleted && (
-                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
-                  <Trophy className="size-8 text-green-600" />
-                  <div>
-                    <p className="font-bold text-green-900 text-lg">
-                      Course Mastered!
-                    </p>
-                    <p className="text-green-700 text-sm">
-                      Amazing work! You've completed all modules in this course.
-                    </p>
+                <div className="space-y-4">
+                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
+                    <Trophy className="size-8 text-green-600" />
+                    <div className="flex-1">
+                      <p className="font-bold text-green-900 text-lg">
+                        Course Mastered!
+                      </p>
+                      <p className="text-green-700 text-sm">
+                        Amazing work! You've completed all modules in this course.
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    onClick={() => setShowCertificate(true)}
+                    variant="yellow"
+                    size="lg"
+                    className="w-full text-lg"
+                  >
+                    <Award className="size-6 mr-2" />
+                    Download Your Certificate
+                  </Button>
                 </div>
               )}
               {!isFullyCompleted && completedModules > 0 && (
@@ -437,6 +452,19 @@ export default function CourseDetail() {
           <div className="border-t pt-6">
             <p className="text-muted-foreground text-sm">No materials uploaded yet.</p>
           </div>
+        )}
+
+        {/* Certificate Dialog */}
+        {isFullyCompleted && user && (
+          <CertificateDialog
+            open={showCertificate}
+            onOpenChange={setShowCertificate}
+            userName={user.name}
+            courseName={course.name}
+            courseCode={course.code}
+            completionDate={new Date()}
+            courseId={course.id}
+          />
         )}
       </div>
     </div>
