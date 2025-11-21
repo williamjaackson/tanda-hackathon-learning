@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import Cookie, APIRouter, HTTPException, status
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 from database import get_db_pool
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import os
+from fastapi import Response
 
 router = APIRouter(prefix="/auth")
 
@@ -40,14 +42,34 @@ def create_access_token(data: dict) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-def decode_access_token(token: str) -> dict:
+
+async def verify_access_token(access_token: Optional[str] = Cookie(None)):
+    """Verify access token from cookie"""
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired"
+        )
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def sign_up(request: SignUpRequest):
     """Register a new user"""
@@ -80,16 +102,28 @@ async def sign_up(request: SignUpRequest):
             # Generate access token
             access_token = create_access_token({"sub": user["email"], "user_id": user["id"]})
             
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
+            auth_response = AuthResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user={
                     "id": user["id"],
                     "email": user["email"],
                     "name": user["name"],
                     "created_at": user["created_at"].isoformat()
                 }
-            }
+            )
+            
+            response = Response(content=auth_response.model_dump_json(), media_type="application/json", status_code=status.HTTP_201_CREATED)
+            response.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                secure=False,  # Set to True in production with HTTPS
+                samesite="lax",
+                max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            )
+            
+            return response
             
     except HTTPException:
         raise
@@ -127,16 +161,28 @@ async def sign_in(request: SignInRequest):
             # Generate access token
             access_token = create_access_token({"sub": user["email"], "user_id": user["id"]})
             
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
+            auth_response = AuthResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user={
                     "id": user["id"],
                     "email": user["email"],
                     "name": user["name"],
                     "created_at": user["created_at"].isoformat()
                 }
-            }
+            )
+            
+            response = Response(content=auth_response.model_dump_json(), media_type="application/json", status_code=status.HTTP_201_CREATED)
+            response.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                secure=False,  # Set to True in production with HTTPS
+                samesite="lax",
+                max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            )
+            
+            return response
             
     except HTTPException:
         raise
@@ -146,23 +192,3 @@ async def sign_in(request: SignInRequest):
             detail=f"Authentication error: {str(e)}"
         )
 
-@router.get("/tables")
-async def list_tables():
-    """List all tables in the database"""
-    
-    try:
-        db_pool = get_db_pool()
-        async with db_pool.acquire() as connection:
-            tables = await connection.fetch("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public'
-                ORDER BY table_name
-            """)
-       
-            return {
-                "tables": [dict(table) for table in tables],
-                "count": len(tables),
-            }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")

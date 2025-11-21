@@ -7,7 +7,22 @@ load_dotenv()
 
 # Database connection pool
 db_pool: asyncpg.Pool | None = None
-
+async def reset_db():
+    """Reset the database by dropping all existing tables"""
+    db_pool = get_db_pool()
+    async with db_pool.acquire() as connection:
+        # Drop all tables in the public schema
+        await connection.execute("""
+            DO $$ DECLARE
+                r RECORD;
+            BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                END LOOP;
+            END $$;
+        """)
+    await init_db()
+    print("✅ Database reset successfully")
 async def init_db_pool():
     """Initialize the database connection pool"""
     global db_pool
@@ -35,6 +50,16 @@ async def init_db():
                     email VARCHAR(255) UNIQUE NOT NULL,
                     password VARCHAR(255) NOT NULL,
                     name VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS courses (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    code VARCHAR(50) UNIQUE NOT NULL,
+                    semester INT,
+                    year INT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
