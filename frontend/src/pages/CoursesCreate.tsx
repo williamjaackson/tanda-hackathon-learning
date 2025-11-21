@@ -49,18 +49,6 @@ export default function CoursesCreate() {
           </div>
 
           <div>
-            <label htmlFor="semester" className="block text-sm font-medium mb-2">
-              Semester
-            </label>
-            <input
-              type="text"
-              id="semester"
-              placeholder="e.g., Semester 1, 2024"
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div>
             <label htmlFor="description" className="block text-sm font-medium mb-2">
               Description
             </label>

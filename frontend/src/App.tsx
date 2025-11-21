@@ -1,8 +1,11 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Courses from './pages/Courses'
 import CoursesCreate from './pages/CoursesCreate'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 
 const router = createBrowserRouter([
   {
@@ -21,12 +24,24 @@ const router = createBrowserRouter([
         path: 'courses/create',
         element: <CoursesCreate />,
       },
+      {
+        path: 'login',
+        element: <Login />,
+      },
+      {
+        path: 'signup',
+        element: <Signup />,
+      },
     ],
   },
 ])
 
 function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  )
 }
 
 export default App

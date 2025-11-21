@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Plus, BookOpen, Calendar } from 'lucide-react'
+import { Plus, BookOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 // Mock data for courses
@@ -8,21 +8,18 @@ const courses = [
     id: 1,
     code: '1004ICT',
     name: 'Professional ICT Practice',
-    semester: 'Semester 1, 2024',
     progress: 65,
   },
   {
     id: 2,
     code: '2107ICT',
     name: 'Database Systems',
-    semester: 'Semester 1, 2024',
     progress: 45,
   },
   {
     id: 3,
     code: '3305ICT',
     name: 'Software Engineering',
-    semester: 'Semester 1, 2024',
     progress: 80,
   },
 ]
@@ -64,14 +61,6 @@ export default function Courses() {
                 </div>
               </div>
             </div>
-
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="size-4" />
-                <span>{course.semester}</span>
-              </div>
-            </div>
-
             <div className="mb-4">
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-muted-foreground">Progress</span>
