@@ -302,7 +302,11 @@ export default function CourseDetail() {
             <div className="space-y-4">
               {course.modules.map((module, index) => {
                 const isCompleted = testStatus?.passed_modules.includes(index) || false
-                const isNextToComplete = !isCompleted && completedModules === index
+                // Find the first incomplete module to mark as "Start Here"
+                const firstIncompleteIndex = course.modules?.findIndex((_, i) =>
+                  !testStatus?.passed_modules.includes(i)
+                ) ?? -1
+                const isNextToComplete = !isCompleted && index === firstIncompleteIndex
 
                 return (
                   <div key={index} className="relative">

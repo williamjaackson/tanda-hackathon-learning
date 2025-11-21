@@ -332,6 +332,36 @@ async def submit_module_test(
         else:
             attempt_id = attempt['id']
 
+        # Check if this module was already passed
+        existing_answers = await connection.fetch(
+            """
+            SELECT ua.is_correct
+            FROM user_answers ua
+            JOIN module_questions mq ON ua.question_id = mq.id
+            WHERE ua.attempt_id = $1 AND mq.course_id = $2 AND mq.module_index = $3
+            """,
+            attempt_id,
+            course_id,
+            module_index
+        )
+
+        # Calculate if module was already passed (all correct)
+        was_already_passed = False
+        if existing_answers:
+            all_correct = all(answer['is_correct'] for answer in existing_answers)
+            was_already_passed = all_correct and len(existing_answers) > 0
+
+        # If already passed, don't allow overwriting with a worse score
+        if was_already_passed:
+            # Return the existing passing status
+            return {
+                "attempt_id": attempt_id,
+                "module_index": module_index,
+                "total": len(existing_answers),
+                "correct": len(existing_answers),
+                "is_passed": True
+            }
+
         # Delete any existing answers for this module in this attempt
         await connection.execute(
             """

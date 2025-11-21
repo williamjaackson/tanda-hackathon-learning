@@ -18,6 +18,7 @@ export default function ModuleTest() {
   const [error, setError] = useState('')
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [testResult, setTestResult] = useState<ModuleTestResult | null>(null)
+  const [wasAlreadyCompleted, setWasAlreadyCompleted] = useState(false)
 
   useEffect(() => {
     const fetchTestData = async () => {
@@ -38,6 +39,19 @@ export default function ModuleTest() {
     }
 
     fetchTestData()
+  }, [courseId, moduleIndex])
+
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (!courseId) return
+      try {
+        const status = await TestService.getTestStatus(parseInt(courseId))
+        setWasAlreadyCompleted(status.passed_modules.includes(parseInt(moduleIndex!)))
+      } catch {
+        // Ignore errors
+      }
+    }
+    checkCompletion()
   }, [courseId, moduleIndex])
 
   const handleAnswerChange = (questionId: number, optionIndex: number) => {
@@ -269,6 +283,13 @@ export default function ModuleTest() {
             <p className="text-muted-foreground">
               Answer all questions correctly to complete this module
             </p>
+            {wasAlreadyCompleted && (
+              <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-xl p-4 max-w-md mx-auto">
+                <p className="text-green-900 font-medium text-sm">
+                  ✓ You've already passed this module! Your completion status is locked in.
+                </p>
+              </div>
+            )}
           </div>
 
         {error && (
