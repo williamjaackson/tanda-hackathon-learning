@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     ffmpeg \
+    sox \
     texlive \
     texlive-latex-extra \
     texlive-fonts-extra \

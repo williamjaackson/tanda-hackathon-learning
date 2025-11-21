@@ -4,13 +4,12 @@ import tempfile
 import shutil
 from pathlib import Path
 from anthropic import AsyncAnthropic
-from gtts import gTTS
 
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 async def generate_manim_video(course_id: int, module_index: int, module_name: str, lesson_content: str) -> str:
     """
-    Generate a manim video with audio narration for a module lesson using Claude AI
+    Generate a manim video with audio narration using manim-voiceover plugin
 
     Args:
         course_id: ID of the course
@@ -26,45 +25,17 @@ async def generate_manim_video(course_id: int, module_index: int, module_name: s
         print(f"🗣️ Generating narration script for module: {module_name}")
         narration_script = await generate_narration_script(module_name, lesson_content)
 
-        # Step 2: Generate audio file from narration
-        print(f"🔊 Generating audio narration for module: {module_name}")
-        audio_path = await generate_audio(narration_script)
+        # Step 2: Generate manim code with voiceover plugin
+        print(f"📝 Generating manim code with voiceover for module: {module_name}")
+        manim_code = await generate_manim_code_with_voiceover(module_name, lesson_content, narration_script)
 
-        # Step 3: Get audio duration to sync video
-        print(f"⏱️ Getting audio duration...")
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "ffprobe",
-                "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                audio_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
+        # Step 3: Execute manim code (voiceover plugin handles audio generation and syncing)
+        print(f"🎬 Rendering manim video with voiceover for module: {module_name}")
+        video_path = await execute_manim_code(course_id, module_index, manim_code)
 
-            if process.returncode != 0:
-                print(f"⚠️ Could not get audio duration, using default of 45 seconds")
-                audio_duration = 45.0
-            else:
-                audio_duration = float(stdout.decode().strip())
-                print(f"🔊 Audio duration: {audio_duration:.2f} seconds")
-        except asyncio.TimeoutError:
-            print(f"⚠️ Audio duration check timed out, using default of 45 seconds")
-            audio_duration = 45.0
-
-        # Step 4: Generate manim code that matches the audio duration
-        print(f"📝 Generating manim code for {audio_duration:.2f} second video")
-        manim_code = await generate_manim_code_with_audio(module_name, lesson_content, narration_script, audio_duration)
-
-        # Step 5: Execute manim code to generate video with audio
-        print(f"🎬 Rendering manim video for module: {module_name}")
-        video_path = await execute_manim_code(course_id, module_index, manim_code, audio_path)
-
-        # Step 5: Return the video URL (relative path for frontend)
+        # Step 4: Return the video URL (relative path for frontend)
         video_url = f"/videos/{course_id}/{module_index}.mp4"
-        print(f"✅ Video with audio generated: {video_url}")
+        print(f"✅ Video with voiceover generated: {video_url}")
 
         return video_url
 
@@ -91,13 +62,13 @@ Content: {lesson_content}
 Requirements:
 1. Write in a friendly, conversational tone suitable for voice narration
 2. Keep it concise - aim for 40-50 seconds when read aloud at normal speaking pace (approximately 120-150 words)
-3. Start with a hook to grab attention
-4. Explain the concept clearly and simply
-5. Use short sentences that flow well when spoken
-6. End with a key takeaway or summary
-7. Avoid complex jargon - use accessible language
-8. Make it engaging and memorable
-9. Count your words - target 120-150 words for proper timing
+3. Break the narration into 3-5 logical segments/sentences that can be paired with visual animations
+4. Start with a hook to grab attention
+5. Explain the concept clearly and simply
+6. Use short sentences that flow well when spoken
+7. End with a key takeaway or summary
+8. Avoid complex jargon - use accessible language
+9. Make it engaging and memorable
 
 IMPORTANT: Only output the narration script text - no additional formatting, labels, or explanations.
 
@@ -112,35 +83,9 @@ Generate the narration script now (120-150 words for 40-50 seconds):"""
     return message.content[0].text.strip()
 
 
-async def generate_audio(narration_script: str) -> str:
+async def generate_manim_code_with_voiceover(module_name: str, lesson_content: str, narration_script: str) -> str:
     """
-    Generate audio file from narration script using Google Text-to-Speech
-    """
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as audio_file:
-            audio_path = audio_file.name
-
-        # Generate audio using gTTS (synchronous, so run in executor)
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: _generate_audio_sync(narration_script, audio_path))
-
-        if not os.path.exists(audio_path):
-            raise Exception("Audio file was not created")
-
-        return audio_path
-    except Exception as e:
-        raise Exception(f"Failed to generate audio: {str(e)}")
-
-
-def _generate_audio_sync(text: str, output_path: str):
-    """Synchronous helper for gTTS"""
-    tts = gTTS(text=text, lang='en', slow=False)
-    tts.save(output_path)
-
-
-async def generate_manim_code_with_audio(module_name: str, lesson_content: str, narration_script: str, audio_duration: float) -> str:
-    """
-    Use Claude AI to generate manim Python code for the lesson with audio sync
+    Use Claude AI to generate manim Python code using manim-voiceover plugin
     """
     message = await client.messages.create(
         model="claude-sonnet-4-5-20250929",
@@ -148,55 +93,58 @@ async def generate_manim_code_with_audio(module_name: str, lesson_content: str, 
         messages=[
             {
                 "role": "user",
-                "content": f"""You are an expert at creating educational videos using Manim (Mathematical Animation Engine).
+                "content": f"""You are an expert at creating educational videos using Manim (Mathematical Animation Engine) with the manim-voiceover plugin.
 
-Generate a Manim scene that teaches the following concept with synchronized visuals:
+Generate a Manim scene that teaches the following concept with synchronized voiceover:
 
 Module: {module_name}
 Content: {lesson_content}
 
-Narration Script (this will be the audio):
+Narration Script (this will be the voiceover):
 "{narration_script}"
 
-Audio Duration: {audio_duration:.2f} seconds
-
 Requirements:
-1. Create a single Scene class called "LessonScene" that inherits from Scene
-2. The video MUST be EXACTLY {audio_duration:.2f} seconds long to match the audio narration
-3. Use clear, readable text (font size 36 or larger)
-4. Time your animations to sync perfectly with the {audio_duration:.2f} second narration
-5. Use colors to highlight important concepts (WHITE, BLUE, GREEN, RED, YELLOW)
-6. Break down complex ideas into simple, visual steps that complement the narration
-7. Include a title at the start
-8. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
-9. Use self.wait() strategically to pace animations - make sure total animation time = {audio_duration:.2f} seconds
-10. Calculate wait times carefully so the total duration matches exactly
+1. Create a class called "LessonScene" that inherits from VoiceoverScene (not Scene!)
+2. Import: from manim_voiceover import VoiceoverScene
+3. Import: from manim_voiceover.services.gtts import GTTSService
+4. In construct(), call: self.set_speech_service(GTTSService())
+5. Use self.voiceover(text="...") as tracker: blocks to add voiceovers
+6. Sync animations using tracker.duration: self.play(Animation, run_time=tracker.duration)
+7. Break the narration into multiple voiceover blocks for better pacing
+8. Use clear, readable text (font size 36 or larger)
+9. Use colors to highlight important concepts (WHITE, BLUE, GREEN, RED, YELLOW)
+10. Include a title at the start
+11. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
 
-CRITICAL: The sum of all animation run_time values and self.wait() durations must equal {audio_duration:.2f} seconds.
-
-IMPORTANT: Only output valid Python code using Manim Community Edition (manim library).
+IMPORTANT: Only output valid Python code using Manim Community Edition with manim-voiceover.
 Do not include any explanations or markdown formatting - only the Python code.
 
 Example structure:
 ```python
 from manim import *
+from manim_voiceover import VoiceoverScene
+from manim_voiceover.services.gtts import GTTSService
 
-class LessonScene(Scene):
+class LessonScene(VoiceoverScene):
     def construct(self):
-        # Title (sync with opening) - ~3 seconds
-        title = Text("{module_name}", font_size=48)
-        self.play(Write(title), run_time=2)
-        self.wait(1)
-        self.play(FadeOut(title), run_time=0.5)
+        self.set_speech_service(GTTSService())
 
-        # Main content with animations timed to match {audio_duration:.2f}s total
-        # ... your code here ...
+        # Title with voiceover
+        with self.voiceover(text="Welcome! Today we're exploring {module_name}.") as tracker:
+            title = Text("{module_name}", font_size=48)
+            self.play(Write(title), run_time=tracker.duration)
 
-        # Final wait to ensure exact duration
-        self.wait(1)
+        self.play(FadeOut(title))
+
+        # Main content with synchronized voiceovers
+        with self.voiceover(text="First key concept...") as tracker:
+            text1 = Text("Concept 1", font_size=36)
+            self.play(FadeIn(text1), run_time=tracker.duration)
+
+        # ... more voiceover blocks ...
 ```
 
-Now generate the complete Manim code that is exactly {audio_duration:.2f} seconds long:"""
+Now generate the complete Manim code with voiceover:"""
             }
         ]
     )
@@ -216,9 +164,9 @@ Now generate the complete Manim code that is exactly {audio_duration:.2f} second
     return code
 
 
-async def execute_manim_code(course_id: int, module_index: int, manim_code: str, audio_path: str) -> str:
+async def execute_manim_code(course_id: int, module_index: int, manim_code: str) -> str:
     """
-    Execute manim code and merge with audio to create final video
+    Execute manim code with voiceover plugin (audio generation and syncing handled by plugin)
     """
     temp_dir = None
     try:
@@ -231,8 +179,8 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
         print(f"📄 Writing manim scene to {scene_file}")
         scene_file.write_text(manim_code)
 
-        # Execute manim to render video (async subprocess)
-        print(f"🎬 Running manim renderer...")
+        # Execute manim with voiceover to render video (async subprocess)
+        print(f"🎬 Running manim renderer with voiceover...")
         try:
             process = await asyncio.create_subprocess_exec(
                 "manim",
@@ -253,11 +201,11 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
                 print(f"❌ {error_msg}")
                 raise Exception(error_msg)
 
-            print(f"✅ Manim rendering completed successfully")
+            print(f"✅ Manim rendering with voiceover completed successfully")
         except asyncio.TimeoutError:
             raise Exception("Manim rendering timed out after 5 minutes")
 
-        # Find the generated video file
+        # Find the generated video file (with audio already embedded by manim-voiceover)
         media_path = temp_path / "media" / "videos" / "scene" / "480p15"
         if not media_path.exists():
             raise Exception(f"Media path does not exist: {media_path}")
@@ -268,60 +216,21 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
             raise Exception(f"No video file generated by manim in {media_path}")
 
         generated_video = video_files[0]
-        print(f"📹 Found generated video: {generated_video}")
+        print(f"📹 Found generated video with voiceover: {generated_video}")
 
         # Create destination directory
         video_dir = Path("static/videos") / str(course_id)
         video_dir.mkdir(parents=True, exist_ok=True)
 
-        # Output video with audio
+        # Copy final video (already has audio from manim-voiceover)
         final_video = video_dir / f"{module_index}.mp4"
-
-        # Merge video and audio using ffmpeg (video and audio should already be synced)
-        print(f"🔊 Merging video with audio narration...")
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "ffmpeg",
-                "-i", str(generated_video),  # Video input
-                "-i", audio_path,  # Audio input
-                "-c:v", "copy",  # Copy video codec (no re-encoding)
-                "-c:a", "aac",  # Encode audio to AAC
-                "-b:a", "192k",  # Audio bitrate
-                "-shortest",  # Use shortest stream
-                "-y",  # Overwrite output file
-                str(final_video),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
-            merge_result_code = process.returncode
-            merge_result_stderr = stderr.decode()
-        except asyncio.TimeoutError:
-            print(f"⚠️ FFmpeg merge timed out")
-            merge_result_code = 1
-            merge_result_stderr = "Timeout"
-
-        if merge_result_code != 0:
-            print(f"⚠️ FFmpeg merge failed: {merge_result_stderr}")
-            # If merge fails, just copy video without audio as fallback
-            print(f"⚠️ Using video without audio as fallback")
-            shutil.copy2(generated_video, final_video)
-        else:
-            print(f"✅ Successfully merged video with synced audio")
+        shutil.copy2(generated_video, final_video)
 
         # Verify final video exists
         if not final_video.exists():
             raise Exception(f"Final video was not created at {final_video}")
 
-        print(f"✅ Video generation complete: {final_video}")
-
-        # Clean up temporary audio file
-        try:
-            if os.path.exists(audio_path):
-                os.unlink(audio_path)
-                print(f"🗑️ Cleaned up temporary audio file")
-        except Exception as e:
-            print(f"⚠️ Could not clean up audio file: {e}")
+        print(f"✅ Video with voiceover complete: {final_video}")
 
         return str(final_video)
 

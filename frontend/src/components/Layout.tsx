@@ -13,7 +13,7 @@ export default function Layout() {
   }
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="fixed w-full bg-white">
+      <header className="fixed w-full bg-white z-[9999]">
         <nav className="flex items-center justify-between p-4">
           <Button asChild variant="ghost">
             <Link to="/">
