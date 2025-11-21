@@ -58,8 +58,6 @@ async def init_db():
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     code VARCHAR(50) UNIQUE NOT NULL,
-                    semester INT,
-                    year INT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)

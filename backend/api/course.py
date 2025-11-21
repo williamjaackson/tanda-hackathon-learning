@@ -32,11 +32,11 @@ async def create_course(course: dict, user: dict = Depends(verify_access_token))
     async with db_pool.acquire() as connection:
         course_id = await connection.fetchval(
             """
-            INSERT INTO courses (name, code, semester, year)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO courses (name, code)
+            VALUES ($1, $2)
             RETURNING id
             """,
-            course["name"], course["code"], course.get("semester"), course.get("year")
+            course["name"], course["code"]
         )
         return {"id": course_id}
 @router.delete("/{course_id}")
