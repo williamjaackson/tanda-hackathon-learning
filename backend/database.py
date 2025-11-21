@@ -59,6 +59,9 @@ async def init_db():
                     name VARCHAR(255) NOT NULL,
                     code VARCHAR(50) UNIQUE NOT NULL,
                     description TEXT,
+                    modules JSONB,
+                    modules_status VARCHAR(50) DEFAULT 'pending',
+                    modules_error TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)

@@ -40,9 +40,9 @@ async def summarize_pdf_with_claude(pdf_bytes: bytes, filename: str) -> str:
         if len(text) > max_chars:
             text = text[:max_chars] + "\n\n[Text truncated due to length...]"
 
-        # Generate summary using Claude (async, non-blocking)
+        # Generate summary using Claude Haiku (async, non-blocking)
         message = await client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             messages=[
                 {

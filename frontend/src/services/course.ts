@@ -1,10 +1,19 @@
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
 
+export interface CourseModule {
+  name: string
+  content: string
+  prerequisites?: number[]
+}
+
 export interface Course {
   id: number
   name: string
   code: string
   description?: string
+  modules?: CourseModule[]
+  modules_status?: 'pending' | 'generating' | 'completed' | 'error'
+  modules_error?: string
 }
 
 export interface CreateCourseData {
@@ -16,7 +25,7 @@ export interface CreateCourseData {
 export interface CoursePDF {
   id: number
   filename: string
-  summary: string
+  summary: string | null
   created_at: string
 }
 
@@ -99,6 +108,18 @@ export class CourseService {
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || 'Failed to delete course')
+    }
+  }
+
+  static async retryModuleGeneration(courseId: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/courses/${courseId}/retry-modules`, {
+      method: 'POST',
+      credentials: 'include', // Include cookies for authentication
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to retry module generation')
     }
   }
 }
