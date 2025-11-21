@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import reactLogo from '../assets/react.svg'
 import viteLogo from '/vite.svg'
+import { Button } from '@/components/ui/button'
 
 export default function Home() {
   const [count, setCount] = useState(0)
@@ -36,12 +37,9 @@ export default function Home() {
       </div>
 
       <div className="card">
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          count is {count}
-        </button>
+        <Button onClick={() => setCount((count) => count + 1)}>
+          Click me {count}
+        </Button>
         <p className="mt-4 text-gray-600">
           Edit <code className="bg-gray-100 px-2 py-1 rounded">src/pages/Home.tsx</code> and save to test HMR
         </p>
