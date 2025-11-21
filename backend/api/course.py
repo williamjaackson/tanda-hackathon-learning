@@ -469,3 +469,60 @@ async def delete_course(course_id: int, user: dict = Depends(verify_access_token
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Course not found")
         return {"detail": "Course deleted successfully"}
+
+# Public endpoints (no authentication required) for shared content
+
+@router.get("/public/{course_id}")
+async def get_course_public(course_id: int):
+    """Get course by ID (public - no authentication required)"""
+    db_pool = get_db_pool()
+    async with db_pool.acquire() as connection:
+        course = await connection.fetchrow(
+            "SELECT * FROM courses WHERE id = $1",
+            course_id
+        )
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        course_dict = dict(course)
+        # Parse modules JSON string to array
+        if course_dict.get('modules'):
+            course_dict['modules'] = json.loads(course_dict['modules'])
+
+        return course_dict
+
+@router.get("/public/{course_id}/modules/{module_index}/lesson")
+async def get_module_lesson_public(
+    course_id: int,
+    module_index: int
+):
+    """Get lesson for a specific module (public - no authentication required)"""
+    db_pool = get_db_pool()
+
+    async with db_pool.acquire() as connection:
+        # Check if course exists and get the module
+        course = await connection.fetchrow(
+            "SELECT modules FROM courses WHERE id = $1",
+            course_id
+        )
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        modules = json.loads(course['modules']) if course['modules'] else []
+        if module_index < 0 or module_index >= len(modules):
+            raise HTTPException(status_code=404, detail="Module not found")
+
+        # Check if lesson exists
+        lesson = await connection.fetchrow(
+            """
+            SELECT lesson_content, video_url, video_status, video_error
+            FROM module_lessons
+            WHERE course_id = $1 AND module_index = $2
+            """,
+            course_id, module_index
+        )
+
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not available yet")
+
+        return dict(lesson)

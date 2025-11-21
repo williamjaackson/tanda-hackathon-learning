@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck, Target, QrCode } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -28,6 +28,9 @@ export default function ModuleLesson() {
   const [testStatus, setTestStatus] = useState<TestStatus | null>(null)
   const [hasTestQuestions, setHasTestQuestions] = useState<boolean>(false)
   const [showQRCode, setShowQRCode] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     // Reset state when module changes
@@ -124,6 +127,14 @@ export default function ModuleLesson() {
 
   // Generate full URL for QR code
   const shareUrl = `${window.location.origin}/courses/${courseId}/modules/${moduleIndex}/view`
+
+  // Format time in MM:SS
+  const formatTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds)) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
@@ -241,15 +252,39 @@ export default function ModuleLesson() {
           )}
 
           {lesson.video_status === 'completed' && lesson.video_url && (
-            <div className="aspect-video border-2 border-slate-200 rounded-2xl overflow-hidden bg-black">
-              <video
-                key={`${courseId}-${moduleIndex}`}
-                controls
-                className="w-full h-full"
-              >
-                <source src={`${API_URL}${lesson.video_url}`} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+            <div className="space-y-3">
+              <div className="aspect-video rounded-2xl overflow-hidden bg-white">
+                <video
+                  ref={videoRef}
+                  key={`${courseId}-${moduleIndex}`}
+                  controls
+                  className="w-full h-full"
+                  onTimeUpdate={(e) => {
+                    const video = e.currentTarget
+                    setVideoProgress(video.currentTime)
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget
+                    setVideoDuration(video.duration)
+                  }}
+                >
+                  <source src={`${API_URL}${lesson.video_url}`} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              {/* Video Progress Bar */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(videoProgress)}</span>
+                  <span>{formatTime(videoDuration)}</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-yellow-500 h-full transition-all duration-200"
+                    style={{ width: `${videoDuration ? (videoProgress / videoDuration) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

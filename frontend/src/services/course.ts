@@ -155,4 +155,34 @@ export class CourseService {
       throw new Error(error.detail || 'Failed to retry video generation')
     }
   }
+
+  // Public methods (no authentication required) for shared content
+
+  static async getCoursePublic(courseId: number): Promise<Course> {
+    const response = await fetch(`${API_URL}/api/courses/public/${courseId}`, {
+      method: 'GET',
+      // No credentials needed for public endpoint
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to fetch course')
+    }
+
+    return response.json()
+  }
+
+  static async getModuleLessonPublic(courseId: number, moduleIndex: number): Promise<ModuleLesson> {
+    const response = await fetch(`${API_URL}/api/courses/public/${courseId}/modules/${moduleIndex}/lesson`, {
+      method: 'GET',
+      // No credentials needed for public endpoint
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to fetch module lesson')
+    }
+
+    return response.json()
+  }
 }

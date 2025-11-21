@@ -107,14 +107,15 @@ Requirements:
 1. Create a class called "LessonScene" that inherits from VoiceoverScene (not Scene!)
 2. Import: from manim_voiceover import VoiceoverScene
 3. Import: from manim_voiceover.services.gtts import GTTSService
-4. In construct(), call: self.set_speech_service(GTTSService())
-5. Use self.voiceover(text="...") as tracker: blocks to add voiceovers
-6. Sync animations using tracker.duration: self.play(Animation, run_time=tracker.duration)
-7. Break the narration into multiple voiceover blocks for better pacing
-8. Use clear, readable text (font size 36 or larger)
-9. Use colors to highlight important concepts (WHITE, BLUE, GREEN, RED, YELLOW)
-10. Include a title at the start
-11. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
+4. In construct(), FIRST set: self.camera.background_color = WHITE (white background!)
+5. In construct(), call: self.set_speech_service(GTTSService())
+6. Use self.voiceover(text="...") as tracker: blocks to add voiceovers
+7. Sync animations using tracker.duration: self.play(Animation, run_time=tracker.duration)
+8. Break the narration into multiple voiceover blocks for better pacing
+9. Use clear, readable text (font size 36 or larger)
+10. Use colors that work well on white background (BLACK for text, BLUE, GREEN, RED, ORANGE for highlights)
+11. Include a title at the start
+12. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
 
 IMPORTANT: Only output valid Python code using Manim Community Edition with manim-voiceover.
 Do not include any explanations or markdown formatting - only the Python code.
@@ -127,18 +128,20 @@ from manim_voiceover.services.gtts import GTTSService
 
 class LessonScene(VoiceoverScene):
     def construct(self):
+        # IMPORTANT: Set white background first!
+        self.camera.background_color = WHITE
         self.set_speech_service(GTTSService())
 
-        # Title with voiceover
+        # Title with voiceover (use BLACK or dark colors for text on white background)
         with self.voiceover(text="Welcome! Today we're exploring {module_name}.") as tracker:
-            title = Text("{module_name}", font_size=48)
+            title = Text("{module_name}", font_size=48, color=BLACK)
             self.play(Write(title), run_time=tracker.duration)
 
         self.play(FadeOut(title))
 
         # Main content with synchronized voiceovers
         with self.voiceover(text="First key concept...") as tracker:
-            text1 = Text("Concept 1", font_size=36)
+            text1 = Text("Concept 1", font_size=36, color=BLACK)
             self.play(FadeIn(text1), run_time=tracker.duration)
 
         # ... more voiceover blocks ...
@@ -222,9 +225,26 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str)
         video_dir = Path("static/videos") / str(course_id)
         video_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy final video (already has audio from manim-voiceover)
+        # Crop the video to remove 1px black border using ffmpeg
         final_video = video_dir / f"{module_index}.mp4"
-        shutil.copy2(generated_video, final_video)
+        print(f"✂️ Cropping video to remove black border...")
+
+        crop_process = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-i", str(generated_video),
+            "-vf", "crop=iw-3:ih-2:2:1",  # Crop 2px from left, 1px from right/top/bottom
+            "-c:a", "copy",  # Copy audio without re-encoding
+            "-y",  # Overwrite output file
+            str(final_video),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await crop_process.communicate()
+
+        if crop_process.returncode != 0:
+            print(f"⚠️ FFmpeg crop failed, falling back to uncropped video: {stderr.decode()}")
+            shutil.copy2(generated_video, final_video)
 
         # Verify final video exists
         if not final_video.exists():

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Loader2, PlayCircle, AlertCircle } from 'lucide-react'
-import { useParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Loader2, PlayCircle, AlertCircle, Sparkles } from 'lucide-react'
+import { useParams, Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { CourseService } from '@/services/course'
 import type { Course } from '@/services/course'
 
@@ -19,15 +20,19 @@ export default function ModuleView() {
   const [lesson, setLesson] = useState<ModuleLesson | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     const fetchLessonData = async () => {
       if (!courseId || moduleIndex === undefined) return
 
       try {
+        // Use public endpoints that don't require authentication
         const [courseData, lessonData] = await Promise.all([
-          CourseService.getCourse(parseInt(courseId)),
-          CourseService.getModuleLesson(parseInt(courseId), parseInt(moduleIndex))
+          CourseService.getCoursePublic(parseInt(courseId)),
+          CourseService.getModuleLessonPublic(parseInt(courseId), parseInt(moduleIndex))
         ])
         setCourse(courseData)
         setLesson(lessonData)
@@ -62,9 +67,35 @@ export default function ModuleView() {
 
   const module = course.modules?.[parseInt(moduleIndex!)]
 
+  // Format time in MM:SS
+  const formatTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds)) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
       <div className="container mx-auto max-w-5xl px-4 py-8">
+        {/* Sign Up Banner */}
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-400 border-2 border-yellow-500 rounded-3xl p-6 mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <Sparkles className="size-10 text-white" />
+              <div>
+                <h3 className="text-xl font-bold text-white">Enjoying this lesson?</h3>
+                <p className="text-white/90">Sign up for free to track your progress, earn certificates, and access all courses!</p>
+              </div>
+            </div>
+            <Button asChild size="lg" variant="secondary" className="bg-white hover:bg-white/90">
+              <Link to="/signup">
+                Sign Up Free
+              </Link>
+            </Button>
+          </div>
+        </div>
+
         {/* Module Header */}
         <div className="bg-white border-2 border-yellow-200 rounded-3xl p-8 mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -103,15 +134,39 @@ export default function ModuleView() {
           )}
 
           {lesson.video_status === 'completed' && lesson.video_url && (
-            <div className="aspect-video border-2 border-slate-200 rounded-2xl overflow-hidden bg-black">
-              <video
-                key={`${courseId}-${moduleIndex}`}
-                controls
-                className="w-full h-full"
-              >
-                <source src={`${API_URL}${lesson.video_url}`} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+            <div className="space-y-3">
+              <div className="aspect-video rounded-2xl overflow-hidden bg-white">
+                <video
+                  ref={videoRef}
+                  key={`${courseId}-${moduleIndex}`}
+                  controls
+                  className="w-full h-full"
+                  onTimeUpdate={(e) => {
+                    const video = e.currentTarget
+                    setVideoProgress(video.currentTime)
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget
+                    setVideoDuration(video.duration)
+                  }}
+                >
+                  <source src={`${API_URL}${lesson.video_url}`} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              {/* Video Progress Bar */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(videoProgress)}</span>
+                  <span>{formatTime(videoDuration)}</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-yellow-500 h-full transition-all duration-200"
+                    style={{ width: `${videoDuration ? (videoProgress / videoDuration) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
