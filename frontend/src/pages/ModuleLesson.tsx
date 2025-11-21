@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw } from 'lucide-r
 import { Link, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import type { Course } from '@/services/course'
+import { AICoach } from '@/components/AICoach'
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
 
@@ -204,6 +205,15 @@ export default function ModuleLesson() {
               {lesson.lesson_content}
             </p>
           </div>
+        </div>
+
+        {/* AI Learning Coach */}
+        <div className="border-t pt-8 mt-8">
+          <h2 className="text-lg font-semibold mb-4">AI Learning Coach</h2>
+          <AICoach
+            courseId={parseInt(courseId!)}
+            moduleIndex={parseInt(moduleIndex!)}
+          />
         </div>
 
         {/* Navigation */}

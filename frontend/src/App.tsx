@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Courses from './pages/Courses'
 import CoursesCreate from './pages/CoursesCreate'
@@ -21,23 +22,43 @@ const router = createBrowserRouter([
       },
       {
         path: 'courses',
-        element: <Courses />,
+        element: (
+          <ProtectedRoute>
+            <Courses />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'courses/create',
-        element: <CoursesCreate />,
+        element: (
+          <ProtectedRoute>
+            <CoursesCreate />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'courses/:courseId',
-        element: <CourseDetail />,
+        element: (
+          <ProtectedRoute>
+            <CourseDetail />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'courses/:courseId/modules/:moduleIndex',
-        element: <ModuleLesson />,
+        element: (
+          <ProtectedRoute>
+            <ModuleLesson />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'courses/:courseId/test',
-        element: <CourseTest />,
+        element: (
+          <ProtectedRoute>
+            <CourseTest />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'login',

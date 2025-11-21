@@ -1,6 +1,5 @@
 import os
 import asyncio
-import subprocess
 import tempfile
 import shutil
 from pathlib import Path
@@ -27,15 +26,39 @@ async def generate_manim_video(course_id: int, module_index: int, module_name: s
         print(f"🗣️ Generating narration script for module: {module_name}")
         narration_script = await generate_narration_script(module_name, lesson_content)
 
-        # Step 2: Generate manim code with voiceover using Claude
-        print(f"📝 Generating manim code for module: {module_name}")
-        manim_code = await generate_manim_code_with_audio(module_name, lesson_content, narration_script)
-
-        # Step 3: Generate audio file from narration
+        # Step 2: Generate audio file from narration
         print(f"🔊 Generating audio narration for module: {module_name}")
         audio_path = await generate_audio(narration_script)
 
-        # Step 4: Execute manim code to generate video with audio
+        # Step 3: Get audio duration to sync video
+        print(f"⏱️ Getting audio duration...")
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "ffprobe",
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audio_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
+
+            if process.returncode != 0:
+                print(f"⚠️ Could not get audio duration, using default of 45 seconds")
+                audio_duration = 45.0
+            else:
+                audio_duration = float(stdout.decode().strip())
+                print(f"🔊 Audio duration: {audio_duration:.2f} seconds")
+        except asyncio.TimeoutError:
+            print(f"⚠️ Audio duration check timed out, using default of 45 seconds")
+            audio_duration = 45.0
+
+        # Step 4: Generate manim code that matches the audio duration
+        print(f"📝 Generating manim code for {audio_duration:.2f} second video")
+        manim_code = await generate_manim_code_with_audio(module_name, lesson_content, narration_script, audio_duration)
+
+        # Step 5: Execute manim code to generate video with audio
         print(f"🎬 Rendering manim video for module: {module_name}")
         video_path = await execute_manim_code(course_id, module_index, manim_code, audio_path)
 
@@ -60,27 +83,28 @@ async def generate_narration_script(module_name: str, lesson_content: str) -> st
         messages=[
             {
                 "role": "user",
-                "content": f"""You are an educational content creator. Write a clear, engaging narration script for a 30-60 second educational video.
+                "content": f"""You are an educational content creator. Write a clear, engaging narration script for a 40-50 second educational video.
 
 Module: {module_name}
 Content: {lesson_content}
 
 Requirements:
 1. Write in a friendly, conversational tone suitable for voice narration
-2. Keep it concise (30-60 seconds when read aloud at normal pace)
+2. Keep it concise - aim for 40-50 seconds when read aloud at normal speaking pace (approximately 120-150 words)
 3. Start with a hook to grab attention
 4. Explain the concept clearly and simply
 5. Use short sentences that flow well when spoken
 6. End with a key takeaway or summary
 7. Avoid complex jargon - use accessible language
 8. Make it engaging and memorable
+9. Count your words - target 120-150 words for proper timing
 
 IMPORTANT: Only output the narration script text - no additional formatting, labels, or explanations.
 
 Example format:
 "Welcome! Today we're exploring [topic]. [Main explanation in 2-3 sentences]. Here's why this matters: [impact/application]. Remember: [key takeaway]."
 
-Generate the narration script now:"""
+Generate the narration script now (120-150 words for 40-50 seconds):"""
             }
         ]
     )
@@ -114,7 +138,7 @@ def _generate_audio_sync(text: str, output_path: str):
     tts.save(output_path)
 
 
-async def generate_manim_code_with_audio(module_name: str, lesson_content: str, narration_script: str) -> str:
+async def generate_manim_code_with_audio(module_name: str, lesson_content: str, narration_script: str, audio_duration: float) -> str:
     """
     Use Claude AI to generate manim Python code for the lesson with audio sync
     """
@@ -134,16 +158,21 @@ Content: {lesson_content}
 Narration Script (this will be the audio):
 "{narration_script}"
 
+Audio Duration: {audio_duration:.2f} seconds
+
 Requirements:
 1. Create a single Scene class called "LessonScene" that inherits from Scene
-2. The video should be 30-60 seconds long (matching the narration length)
+2. The video MUST be EXACTLY {audio_duration:.2f} seconds long to match the audio narration
 3. Use clear, readable text (font size 36 or larger)
-4. Time your animations to sync with the narration script
+4. Time your animations to sync perfectly with the {audio_duration:.2f} second narration
 5. Use colors to highlight important concepts (WHITE, BLUE, GREEN, RED, YELLOW)
 6. Break down complex ideas into simple, visual steps that complement the narration
 7. Include a title at the start
 8. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
-9. Use self.wait() strategically to pace animations with the expected narration timing
+9. Use self.wait() strategically to pace animations - make sure total animation time = {audio_duration:.2f} seconds
+10. Calculate wait times carefully so the total duration matches exactly
+
+CRITICAL: The sum of all animation run_time values and self.wait() durations must equal {audio_duration:.2f} seconds.
 
 IMPORTANT: Only output valid Python code using Manim Community Edition (manim library).
 Do not include any explanations or markdown formatting - only the Python code.
@@ -154,20 +183,20 @@ from manim import *
 
 class LessonScene(Scene):
     def construct(self):
-        # Title (sync with opening)
+        # Title (sync with opening) - ~3 seconds
         title = Text("{module_name}", font_size=48)
-        self.play(Write(title))
-        self.wait(2)
-        self.play(FadeOut(title))
+        self.play(Write(title), run_time=2)
+        self.wait(1)
+        self.play(FadeOut(title), run_time=0.5)
 
-        # Main content with animations timed to narration
+        # Main content with animations timed to match {audio_duration:.2f}s total
         # ... your code here ...
 
-        # Use self.wait() to match narration pauses
+        # Final wait to ensure exact duration
         self.wait(1)
 ```
 
-Now generate the complete Manim code:"""
+Now generate the complete Manim code that is exactly {audio_duration:.2f} seconds long:"""
             }
         ]
     )
@@ -202,30 +231,31 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
         print(f"📄 Writing manim scene to {scene_file}")
         scene_file.write_text(manim_code)
 
-        # Execute manim to render video (without audio first)
+        # Execute manim to render video (async subprocess)
         print(f"🎬 Running manim renderer...")
-        result = subprocess.run(
-            [
+        try:
+            process = await asyncio.create_subprocess_exec(
                 "manim",
                 "-ql",  # Low quality for faster rendering
                 "--format=mp4",
                 "--media_dir",
                 str(temp_path / "media"),
                 str(scene_file),
-                "LessonScene"
-            ],
-            capture_output=True,
-            text=True,
-            timeout=300,  # 5 minute timeout
-            cwd=temp_dir
-        )
+                "LessonScene",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=temp_dir
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
 
-        if result.returncode != 0:
-            error_msg = f"Manim rendering failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-            print(f"❌ {error_msg}")
-            raise Exception(error_msg)
+            if process.returncode != 0:
+                error_msg = f"Manim rendering failed:\nSTDOUT: {stdout.decode()}\nSTDERR: {stderr.decode()}"
+                print(f"❌ {error_msg}")
+                raise Exception(error_msg)
 
-        print(f"✅ Manim rendering completed successfully")
+            print(f"✅ Manim rendering completed successfully")
+        except asyncio.TimeoutError:
+            raise Exception("Manim rendering timed out after 5 minutes")
 
         # Find the generated video file
         media_path = temp_path / "media" / "videos" / "scene" / "480p15"
@@ -247,31 +277,37 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
         # Output video with audio
         final_video = video_dir / f"{module_index}.mp4"
 
-        # Merge video and audio using ffmpeg
+        # Merge video and audio using ffmpeg (video and audio should already be synced)
         print(f"🔊 Merging video with audio narration...")
-        merge_result = subprocess.run(
-            [
+        try:
+            process = await asyncio.create_subprocess_exec(
                 "ffmpeg",
                 "-i", str(generated_video),  # Video input
                 "-i", audio_path,  # Audio input
                 "-c:v", "copy",  # Copy video codec (no re-encoding)
                 "-c:a", "aac",  # Encode audio to AAC
-                "-shortest",  # Stop when shortest input ends
+                "-b:a", "192k",  # Audio bitrate
+                "-shortest",  # Use shortest stream
                 "-y",  # Overwrite output file
-                str(final_video)
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+                str(final_video),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
+            merge_result_code = process.returncode
+            merge_result_stderr = stderr.decode()
+        except asyncio.TimeoutError:
+            print(f"⚠️ FFmpeg merge timed out")
+            merge_result_code = 1
+            merge_result_stderr = "Timeout"
 
-        if merge_result.returncode != 0:
-            print(f"⚠️ FFmpeg merge failed: {merge_result.stderr}")
+        if merge_result_code != 0:
+            print(f"⚠️ FFmpeg merge failed: {merge_result_stderr}")
             # If merge fails, just copy video without audio as fallback
             print(f"⚠️ Using video without audio as fallback")
             shutil.copy2(generated_video, final_video)
         else:
-            print(f"✅ Successfully merged video with audio")
+            print(f"✅ Successfully merged video with synced audio")
 
         # Verify final video exists
         if not final_video.exists():
@@ -289,10 +325,6 @@ async def execute_manim_code(course_id: int, module_index: int, manim_code: str,
 
         return str(final_video)
 
-    except subprocess.TimeoutExpired as e:
-        error_msg = f"Manim rendering timed out after 5 minutes"
-        print(f"❌ {error_msg}")
-        raise Exception(error_msg)
     except Exception as e:
         error_msg = f"Failed to execute manim: {str(e)}"
         print(f"❌ {error_msg}")
