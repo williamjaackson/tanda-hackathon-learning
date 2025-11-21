@@ -76,12 +76,6 @@ export default function Courses() {
               </div>
             </div>
 
-            {course.description && (
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                {course.description}
-              </p>
-            )}
-
             <Button variant="outline" className="w-full">
               View Course
             </Button>

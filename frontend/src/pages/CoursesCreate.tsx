@@ -44,8 +44,7 @@ export default function CoursesCreate() {
         code,
         name,
         description: description || undefined,
-      })
-      // TODO: Handle file uploads separately when backend supports it
+      }, files)
       navigate('/courses')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create course')

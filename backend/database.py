@@ -58,6 +58,17 @@ async def init_db():
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     code VARCHAR(50) UNIQUE NOT NULL,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS course_pdfs (
+                    id SERIAL PRIMARY KEY,
+                    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                    filename VARCHAR(255) NOT NULL,
+                    pdf_data BYTEA NOT NULL,
+                    summary TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)

@@ -13,6 +13,13 @@ export interface CreateCourseData {
   description?: string
 }
 
+export interface CoursePDF {
+  id: number
+  filename: string
+  summary: string
+  created_at: string
+}
+
 export class CourseService {
   static async getCourses(): Promise<Course[]> {
     const response = await fetch(`${API_URL}/api/courses/`, {
@@ -42,19 +49,42 @@ export class CourseService {
     return response.json()
   }
 
-  static async createCourse(data: CreateCourseData): Promise<{ id: number }> {
+  static async createCourse(data: CreateCourseData, files: File[] = []): Promise<{ id: number }> {
+    const formData = new FormData()
+    formData.append('name', data.name)
+    formData.append('code', data.code)
+    if (data.description) {
+      formData.append('description', data.description)
+    }
+
+    // Append all PDF files
+    files.forEach(file => {
+      formData.append('files', file)
+    })
+
     const response = await fetch(`${API_URL}/api/courses/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include', // Include cookies for authentication
-      body: JSON.stringify(data),
+      body: formData, // Don't set Content-Type header - browser sets it with boundary
     })
 
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || 'Failed to create course')
+    }
+
+    return response.json()
+  }
+
+  static async getCoursePDFs(courseId: number): Promise<CoursePDF[]> {
+    const response = await fetch(`${API_URL}/api/courses/${courseId}/pdfs`, {
+      method: 'GET',
+      credentials: 'include', // Include cookies for authentication
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to fetch course PDFs')
     }
 
     return response.json()
