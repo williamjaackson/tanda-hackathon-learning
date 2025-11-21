@@ -25,15 +25,15 @@ export interface SignInData {
 }
 
 export class AuthService {
-  private static TOKEN_KEY = 'auth_token'
   private static USER_KEY = 'auth_user'
 
   static async signUp(data: SignUpData): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/auth/signup`, {
+    const response = await fetch(`${API_URL}/api/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies
       body: JSON.stringify(data),
     })
 
@@ -43,16 +43,18 @@ export class AuthService {
     }
 
     const authData: AuthResponse = await response.json()
-    this.saveAuth(authData)
+    // Token is now in HTTP-only cookie, only save user data
+    localStorage.setItem(this.USER_KEY, JSON.stringify(authData.user))
     return authData
   }
 
   static async signIn(data: SignInData): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/auth/signin`, {
+    const response = await fetch(`${API_URL}/api/auth/signin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies
       body: JSON.stringify(data),
     })
 
@@ -62,17 +64,15 @@ export class AuthService {
     }
 
     const authData: AuthResponse = await response.json()
-    this.saveAuth(authData)
+    // Token is now in HTTP-only cookie, only save user data
+    localStorage.setItem(this.USER_KEY, JSON.stringify(authData.user))
     return authData
   }
 
   static signOut(): void {
-    localStorage.removeItem(this.TOKEN_KEY)
+    // Clear user data from localStorage
     localStorage.removeItem(this.USER_KEY)
-  }
-
-  static getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY)
+    // Cookie will be cleared by the browser when it expires
   }
 
   static getUser(): User | null {
@@ -86,11 +86,6 @@ export class AuthService {
   }
 
   static isAuthenticated(): boolean {
-    return this.getToken() !== null
-  }
-
-  private static saveAuth(authData: AuthResponse): void {
-    localStorage.setItem(this.TOKEN_KEY, authData.access_token)
-    localStorage.setItem(this.USER_KEY, JSON.stringify(authData.user))
+    return this.getUser() !== null
   }
 }

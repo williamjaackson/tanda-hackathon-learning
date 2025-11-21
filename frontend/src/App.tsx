@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import Courses from './pages/Courses'
 import CoursesCreate from './pages/CoursesCreate'
+import CourseDetail from './pages/CourseDetail'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: 'courses/create',
         element: <CoursesCreate />,
+      },
+      {
+        path: 'courses/:courseId',
+        element: <CourseDetail />,
       },
       {
         path: 'login',

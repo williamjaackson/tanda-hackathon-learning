@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, BookOpen, Upload, FileText, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { CourseService } from '@/services/course'
 
 export default function CoursesCreate() {
+  const navigate = useNavigate()
   const [files, setFiles] = useState<File[]>([])
+  const [code, setCode] = useState('')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -26,6 +33,27 @@ export default function CoursesCreate() {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+
+    try {
+      await CourseService.createCourse({
+        code,
+        name,
+        description: description || undefined,
+      })
+      // TODO: Handle file uploads separately when backend supports it
+      navigate('/courses')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create course')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
       <Button variant="ghost" asChild className="mb-6">
@@ -46,7 +74,13 @@ export default function CoursesCreate() {
           </div>
         </div>
 
-        <form className="space-y-6">
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="code" className="block text-sm font-medium mb-2">
               Course Code
@@ -54,8 +88,11 @@ export default function CoursesCreate() {
             <input
               type="text"
               id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
               placeholder="e.g., 1004"
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              required
             />
           </div>
 
@@ -66,8 +103,11 @@ export default function CoursesCreate() {
             <input
               type="text"
               id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Professional ICT Practice"
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              required
             />
           </div>
 
@@ -77,6 +117,8 @@ export default function CoursesCreate() {
             </label>
             <textarea
               id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               rows={4}
               placeholder="Enter course description..."
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
@@ -151,8 +193,8 @@ export default function CoursesCreate() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" className="flex-1">
-              Create Course
+            <Button type="submit" className="flex-1" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Course'}
             </Button>
             <Button type="button" variant="outline" asChild>
               <Link to="/courses">Cancel</Link>

@@ -1,30 +1,30 @@
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, BookOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-// Mock data for courses
-const courses = [
-  {
-    id: 1,
-    code: '1004ICT',
-    name: 'Professional ICT Practice',
-    progress: 65,
-  },
-  {
-    id: 2,
-    code: '2107ICT',
-    name: 'Database Systems',
-    progress: 45,
-  },
-  {
-    id: 3,
-    code: '3305ICT',
-    name: 'Software Engineering',
-    progress: 80,
-  },
-]
+import { CourseService } from '@/services/course'
+import type { Course } from '@/services/course'
 
 export default function Courses() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setIsLoading(true)
+        const data = await CourseService.getCourses()
+        setCourses(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load courses')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [])
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -42,11 +42,25 @@ export default function Courses() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {isLoading && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading courses...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-12">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
+      {!isLoading && !error && courses.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course) => (
-          <div
+          <Link
             key={course.id}
-            className="bg-white border rounded-lg p-6 cursor-pointer hover:-translate-y-1 transition-all hover:shadow-md"
+            to={`/courses/${course.id}`}
+            className="bg-white border rounded-lg p-6 block hover:-translate-y-1 transition-all hover:shadow-md"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -61,27 +75,22 @@ export default function Courses() {
                 </div>
               </div>
             </div>
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-semibold">{course.progress}%</span>
-              </div>
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary rounded-full h-2 transition-all"
-                  style={{ width: `${course.progress}%` }}
-                />
-              </div>
-            </div>
+
+            {course.description && (
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                {course.description}
+              </p>
+            )}
 
             <Button variant="outline" className="w-full">
               View Course
             </Button>
-          </div>
+          </Link>
         ))}
-      </div>
+        </div>
+      )}
 
-      {courses.length === 0 && (
+      {!isLoading && !error && courses.length === 0 && (
         <div className="text-center py-12">
           <BookOpen className="size-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2">No courses yet</h3>
