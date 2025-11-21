@@ -182,7 +182,7 @@ async def get_courses(user: dict = Depends(verify_access_token)):
     """Get all courses"""
     db_pool = get_db_pool()
     async with db_pool.acquire() as connection:
-        courses = await connection.fetch("SELECT * FROM courses")
+        courses = await connection.fetch("SELECT * FROM courses WHERE user_id = $1", user["user_id"])
         result = []
         for course in courses:
             course_dict = dict(course)
@@ -198,8 +198,8 @@ async def get_course(course_id: int, user: dict = Depends(verify_access_token)):
     db_pool = get_db_pool()
     async with db_pool.acquire() as connection:
         course = await connection.fetchrow(
-            "SELECT * FROM courses WHERE id = $1",
-            course_id
+            "SELECT * FROM courses WHERE id = $1 AND user_id = $2",
+            course_id, user["user_id"]
         )
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
@@ -224,11 +224,11 @@ async def create_course(
         # Create the course
         course_id = await connection.fetchval(
             """
-            INSERT INTO courses (name, code, description)
-            VALUES ($1, $2, $3)
+            INSERT INTO courses (name, code, description, user_id)
+            VALUES ($1, $2, $3, $4)
             RETURNING id
             """,
-            name, code, description
+            name, code, description, user["user_id"]
         )
 
         # Store PDFs immediately without summaries, then schedule background summarization
@@ -278,8 +278,8 @@ async def retry_module_generation(
     async with db_pool.acquire() as connection:
         # Check if course exists
         course = await connection.fetchrow(
-            "SELECT id FROM courses WHERE id = $1",
-            course_id
+            "SELECT id FROM courses WHERE id = $1 AND user_id = $2",
+            course_id, user["user_id"]
         )
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
@@ -308,8 +308,8 @@ async def get_module_lesson(
     async with db_pool.acquire() as connection:
         # Check if course exists and get the module
         course = await connection.fetchrow(
-            "SELECT modules FROM courses WHERE id = $1",
-            course_id
+            "SELECT modules FROM courses WHERE id = $1 AND user_id = $2",
+            course_id, user["user_id"]
         )
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
@@ -417,8 +417,8 @@ async def retry_video_generation(
     async with db_pool.acquire() as connection:
         # Get the module and lesson
         course = await connection.fetchrow(
-            "SELECT modules FROM courses WHERE id = $1",
-            course_id
+            "SELECT modules FROM courses WHERE id = $1 AND user_id = $2",
+            course_id, user["user_id"]
         )
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
@@ -463,8 +463,8 @@ async def delete_course(course_id: int, user: dict = Depends(verify_access_token
     db_pool = get_db_pool()
     async with db_pool.acquire() as connection:
         result = await connection.execute(
-            "DELETE FROM courses WHERE id = $1",
-            course_id
+            "DELETE FROM courses WHERE id = $1 AND user_id = $2",
+            course_id, user["user_id"]
         )
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Course not found")

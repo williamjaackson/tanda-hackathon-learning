@@ -88,6 +88,7 @@ async def init_db():
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS courses (
                     id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     name VARCHAR(255) NOT NULL,
                     code VARCHAR(50) UNIQUE NOT NULL,
                     description TEXT,
