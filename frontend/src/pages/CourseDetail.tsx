@@ -259,36 +259,33 @@ export default function CourseDetail() {
                       <div className="absolute left-5 top-14 bottom-0 w-0.5 bg-primary/20 -mb-6"></div>
                     )}
 
-                    <div className={`border rounded-lg p-6 transition-all relative ${
-                      isCompleted
-                        ? 'bg-green-50 border-green-300 hover:shadow-md'
-                        : 'bg-white hover:shadow-sm'
-                    }`}>
-                      <div className="flex items-start gap-4">
-                        <div className={`flex items-center justify-center size-10 rounded-full text-sm font-bold flex-shrink-0 relative z-10 ${
-                          isCompleted
-                            ? 'bg-green-600 text-white'
-                            : 'bg-primary text-white'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-3">
-                            <h3 className="font-semibold text-xl">{module.name}</h3>
-                            {isCompleted && (
-                              <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">
-                                ✓ Completed
-                              </span>
-                            )}
-                          </div>
-                          <p className={`whitespace-pre-line leading-relaxed ${
-                            isCompleted ? 'text-green-900/70' : 'text-muted-foreground'
+                    <Link to={`/courses/${courseId}/modules/${index}`}>
+                      <div className={`border rounded-lg p-6 transition-all relative cursor-pointer ${
+                        isCompleted
+                          ? 'bg-green-50 border-green-300 hover:shadow-md'
+                          : 'bg-white hover:shadow-md'
+                      }`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`flex items-center justify-center size-10 rounded-full text-sm font-bold flex-shrink-0 relative z-10 ${
+                            isCompleted
+                              ? 'bg-green-600 text-white'
+                              : 'bg-primary text-white'
                           }`}>
-                            {module.content}
-                          </p>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-xl">{module.name}</h3>
+                              {isCompleted && (
+                                <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                                  ✓ Completed
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </div>
                 )
               })}

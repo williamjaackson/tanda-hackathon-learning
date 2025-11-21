@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from pathlib import Path
 from database import init_db_pool, close_db_pool, init_db, reset_db
 from api import example, auth, course, test
 import os
@@ -34,3 +36,11 @@ app.include_router(example.router)
 app.include_router(auth.router, prefix="/api")
 app.include_router(course.router, prefix="/api")
 app.include_router(test.router, prefix="/api")
+
+# Create static directory if it doesn't exist
+static_dir = Path("static")
+static_dir.mkdir(exist_ok=True)
+(static_dir / "videos").mkdir(exist_ok=True)
+
+# Mount static files for serving videos
+app.mount("/videos", StaticFiles(directory="static/videos"), name="videos")

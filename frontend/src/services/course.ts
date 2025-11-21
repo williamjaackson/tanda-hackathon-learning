@@ -29,6 +29,13 @@ export interface CoursePDF {
   created_at: string
 }
 
+export interface ModuleLesson {
+  lesson_content: string
+  video_url: string | null
+  video_status: 'pending' | 'generating' | 'completed' | 'error'
+  video_error?: string
+}
+
 export class CourseService {
   static async getCourses(): Promise<Course[]> {
     const response = await fetch(`${API_URL}/api/courses/`, {
@@ -121,5 +128,19 @@ export class CourseService {
       const error = await response.json()
       throw new Error(error.detail || 'Failed to retry module generation')
     }
+  }
+
+  static async getModuleLesson(courseId: number, moduleIndex: number): Promise<ModuleLesson> {
+    const response = await fetch(`${API_URL}/api/courses/${courseId}/modules/${moduleIndex}/lesson`, {
+      method: 'GET',
+      credentials: 'include', // Include cookies for authentication
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to fetch module lesson')
+    }
+
+    return response.json()
   }
 }

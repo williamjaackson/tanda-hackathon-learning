@@ -75,6 +75,56 @@ async def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS module_questions (
+                    id SERIAL PRIMARY KEY,
+                    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                    module_index INTEGER NOT NULL,
+                    question_text TEXT NOT NULL,
+                    correct_answer_index INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS question_options (
+                    id SERIAL PRIMARY KEY,
+                    question_id INTEGER NOT NULL REFERENCES module_questions(id) ON DELETE CASCADE,
+                    option_index INTEGER NOT NULL,
+                    option_text TEXT NOT NULL
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS user_test_attempts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                    completed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS user_answers (
+                    id SERIAL PRIMARY KEY,
+                    attempt_id INTEGER NOT NULL REFERENCES user_test_attempts(id) ON DELETE CASCADE,
+                    question_id INTEGER NOT NULL REFERENCES module_questions(id) ON DELETE CASCADE,
+                    selected_option_index INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS module_lessons (
+                    id SERIAL PRIMARY KEY,
+                    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                    module_index INTEGER NOT NULL,
+                    lesson_content TEXT NOT NULL,
+                    video_url TEXT,
+                    video_status VARCHAR(50) DEFAULT 'pending',
+                    video_error TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(course_id, module_index)
+                )
+            """)
         print("✅ Database initialized successfully")
 
 async def close_db_pool():

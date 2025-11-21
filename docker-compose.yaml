@@ -22,6 +22,7 @@ services:
       - "${BACKEND_PORT:-3000}:3000"
     volumes:
       - ./backend:/app # development volume
+      - ./backend/static:/app/static # persist generated videos
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
