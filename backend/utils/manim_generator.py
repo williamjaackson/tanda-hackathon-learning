@@ -110,12 +110,14 @@ Requirements:
 4. In construct(), FIRST set: self.camera.background_color = WHITE (white background!)
 5. In construct(), call: self.set_speech_service(GTTSService())
 6. Use self.voiceover(text="...") as tracker: blocks to add voiceovers
-7. Sync animations using tracker.duration: self.play(Animation, run_time=tracker.duration)
-8. Break the narration into multiple voiceover blocks for better pacing
-9. Use clear, readable text (font size 36 or larger)
-10. Use colors that work well on white background (BLACK for text, BLUE, GREEN, RED, ORANGE for highlights)
-11. Include a title at the start
-12. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
+7. CRITICAL: Every voiceover block MUST have non-empty text. Never use text="" or empty strings!
+8. Sync animations using tracker.duration: self.play(Animation, run_time=tracker.duration)
+9. Break the narration into multiple voiceover blocks for better pacing
+10. Use clear, readable text (font size 36 or larger)
+11. Use colors that work well on white background (BLACK for text, BLUE, GREEN, RED, ORANGE for highlights)
+12. Include a title at the start
+13. Use manim's built-in animations like Write, FadeIn, FadeOut, Transform, Create, etc.
+14. For visual-only animations without narration, use self.play() without voiceover context manager
 
 IMPORTANT: Only output valid Python code using Manim Community Edition with manim-voiceover.
 Do not include any explanations or markdown formatting - only the Python code.
@@ -144,7 +146,13 @@ class LessonScene(VoiceoverScene):
             text1 = Text("Concept 1", font_size=36, color=BLACK)
             self.play(FadeIn(text1), run_time=tracker.duration)
 
-        # ... more voiceover blocks ...
+        # For animations without narration, use self.play() directly
+        self.play(FadeOut(text1))
+
+        # More voiceover blocks with non-empty text
+        with self.voiceover(text="Let me explain further...") as tracker:
+            text2 = Text("More details", font_size=36, color=BLACK)
+            self.play(Write(text2), run_time=tracker.duration)
 ```
 
 Now generate the complete Manim code with voiceover:"""
