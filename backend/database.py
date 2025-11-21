@@ -1,5 +1,6 @@
 import os
 import asyncpg
+import bcrypt
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -40,6 +41,37 @@ async def init_db_pool():
     except Exception as e:
         print(f"❌ Failed to create database connection pool: {e}")
         raise
+
+async def init_demo_user():
+    """Create or update demo user account"""
+    db_pool = get_db_pool()
+    async with db_pool.acquire() as connection:
+        # Hash the password "testing"
+        hashed_password = bcrypt.hashpw("testing".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # Check if demo user exists
+        existing_user = await connection.fetchrow(
+            "SELECT id FROM users WHERE email = $1",
+            "test@test.com"
+        )
+
+        if existing_user:
+            # Update password in case it was changed
+            await connection.execute(
+                "UPDATE users SET password = $1 WHERE email = $2",
+                hashed_password, "test@test.com"
+            )
+            print("✅ Demo user password updated")
+        else:
+            # Create demo user
+            await connection.execute(
+                """
+                INSERT INTO users (email, password, name, created_at)
+                VALUES ($1, $2, $3, NOW())
+                """,
+                "test@test.com", hashed_password, "Demo User"
+            )
+            print("✅ Demo user created (test@test.com / testing)")
 
 async def init_db():
         db_pool = get_db_pool()
@@ -126,6 +158,9 @@ async def init_db():
                 )
             """)
         print("✅ Database initialized successfully")
+
+        # Create demo user after tables are created
+        await init_demo_user()
 
 async def close_db_pool():
     """Close the database connection pool"""

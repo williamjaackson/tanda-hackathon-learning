@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, PlayCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
 import type { Course } from '@/services/course'
@@ -19,6 +19,7 @@ export default function ModuleLesson() {
   const [course, setCourse] = useState<Course | null>(null)
   const [lesson, setLesson] = useState<ModuleLesson | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -61,6 +62,20 @@ export default function ModuleLesson() {
 
     return () => clearInterval(pollInterval)
   }, [courseId, moduleIndex])
+
+  const handleRetryVideo = async () => {
+    if (!courseId || moduleIndex === undefined) return
+
+    try {
+      setIsRetrying(true)
+      await CourseService.retryVideoGeneration(parseInt(courseId), parseInt(moduleIndex))
+      // Polling will automatically pick up the new status
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to retry video generation')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -131,10 +146,29 @@ export default function ModuleLesson() {
             <div className="aspect-video border rounded-lg bg-red-50 border-red-200 flex items-center justify-center">
               <div className="text-center p-6">
                 <AlertCircle className="size-12 text-red-600 mx-auto mb-4" />
-                <p className="font-medium text-red-900">Failed to generate video</p>
+                <p className="font-medium text-red-900 mb-2">Failed to generate video</p>
                 {lesson.video_error && (
-                  <p className="text-sm text-red-700 mt-2">{lesson.video_error}</p>
+                  <p className="text-sm text-red-700 mt-2 mb-4">{lesson.video_error}</p>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetryVideo}
+                  disabled={isRetrying}
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  {isRetrying ? (
+                    <>
+                      <Loader2 className="size-4 mr-2 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="size-4 mr-2" />
+                      Retry Video Generation
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}

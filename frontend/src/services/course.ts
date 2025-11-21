@@ -143,4 +143,16 @@ export class CourseService {
 
     return response.json()
   }
+
+  static async retryVideoGeneration(courseId: number, moduleIndex: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/courses/${courseId}/modules/${moduleIndex}/retry-video`, {
+      method: 'POST',
+      credentials: 'include', // Include cookies for authentication
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to retry video generation')
+    }
+  }
 }

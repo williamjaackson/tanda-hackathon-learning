@@ -404,6 +404,59 @@ async def generate_module_video(course_id: int, module_index: int, module_name: 
                 str(e), course_id, module_index
             )
 
+@router.post("/{course_id}/modules/{module_index}/retry-video")
+async def retry_video_generation(
+    course_id: int,
+    module_index: int,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(verify_access_token)
+):
+    """Retry video generation for a failed module lesson"""
+    db_pool = get_db_pool()
+
+    async with db_pool.acquire() as connection:
+        # Get the module and lesson
+        course = await connection.fetchrow(
+            "SELECT modules FROM courses WHERE id = $1",
+            course_id
+        )
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        modules = json.loads(course['modules']) if course['modules'] else []
+        if module_index < 0 or module_index >= len(modules):
+            raise HTTPException(status_code=404, detail="Module not found")
+
+        module = modules[module_index]
+
+        # Check if lesson exists
+        lesson = await connection.fetchrow(
+            """
+            SELECT lesson_content, video_status
+            FROM module_lessons
+            WHERE course_id = $1 AND module_index = $2
+            """,
+            course_id, module_index
+        )
+
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+
+        # Reset status to pending
+        await connection.execute(
+            """
+            UPDATE module_lessons
+            SET video_status = 'pending', video_error = NULL
+            WHERE course_id = $1 AND module_index = $2
+            """,
+            course_id, module_index
+        )
+
+    # Schedule video generation in background
+    background_tasks.add_task(generate_module_video, course_id, module_index, module['name'], lesson['lesson_content'])
+
+    return {"detail": "Video generation queued for retry"}
+
 @router.delete("/{course_id}")
 async def delete_course(course_id: int, user: dict = Depends(verify_access_token)):
     """Delete a course by ID"""

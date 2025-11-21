@@ -10,8 +10,7 @@ import os
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db_pool() # Startup: Create database connection pool
-    await reset_db()  # Reset database for a clean state
-    await init_db()
+    await init_db() # Initialize database tables if they don't exist
     yield
     await close_db_pool() # Shutdown: Close database connection pool
 
