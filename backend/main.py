@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from database import init_db_pool, close_db_pool
-from api import example
+from database import init_db_pool, close_db_pool, init_db
+from api import example, auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db_pool() # Startup: Create database connection pool
+    await init_db()
     yield
     await close_db_pool() # Shutdown: Close database connection pool
 
@@ -27,3 +28,4 @@ def read_root():
 
 # Mount API routes
 app.include_router(example.router)
+app.include_router(auth.router)

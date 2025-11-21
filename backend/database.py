@@ -26,6 +26,19 @@ async def init_db_pool():
         print(f"❌ Failed to create database connection pool: {e}")
         raise
 
+async def init_db():
+        db_pool = get_db_pool()
+        async with db_pool.acquire() as connection:
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        print("✅ Database initialized successfully")
 
 async def close_db_pool():
     """Close the database connection pool"""
