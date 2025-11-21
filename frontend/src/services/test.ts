@@ -33,6 +33,14 @@ export interface TestStatus {
   module_results?: Record<number, ModuleResult>
 }
 
+export interface ModuleTestResult {
+  attempt_id: number
+  module_index: number
+  total: number
+  correct: number
+  is_passed: boolean
+}
+
 export class TestService {
   static async getTestQuestions(courseId: number): Promise<TestQuestion[]> {
     const response = await fetch(`${API_URL}/api/tests/${courseId}/questions`, {
@@ -43,6 +51,42 @@ export class TestService {
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || 'Failed to fetch test questions')
+    }
+
+    return response.json()
+  }
+
+  static async getModuleTestQuestions(courseId: number, moduleIndex: number): Promise<TestQuestion[]> {
+    const response = await fetch(`${API_URL}/api/tests/${courseId}/modules/${moduleIndex}/questions`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to fetch module test questions')
+    }
+
+    return response.json()
+  }
+
+  static async submitModuleTest(
+    courseId: number,
+    moduleIndex: number,
+    submission: TestSubmission
+  ): Promise<ModuleTestResult> {
+    const response = await fetch(`${API_URL}/api/tests/${courseId}/modules/${moduleIndex}/submit`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submission),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to submit module test')
     }
 
     return response.json()

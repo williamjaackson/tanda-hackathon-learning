@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Loader2, PlayCircle, AlertCircle, RefreshCw, ClipboardCheck } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { CourseService } from '@/services/course'
+import { TestService } from '@/services/test'
 import type { Course } from '@/services/course'
+import type { TestStatus } from '@/services/test'
 import { AICoach } from '@/components/AICoach'
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
@@ -22,6 +24,8 @@ export default function ModuleLesson() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRetrying, setIsRetrying] = useState(false)
   const [error, setError] = useState('')
+  const [testStatus, setTestStatus] = useState<TestStatus | null>(null)
+  const [hasTestQuestions, setHasTestQuestions] = useState<boolean>(false)
 
   useEffect(() => {
     // Reset state when module changes
@@ -33,12 +37,23 @@ export default function ModuleLesson() {
       if (!courseId || moduleIndex === undefined) return
 
       try {
-        const [courseData, lessonData] = await Promise.all([
+        const [courseData, lessonData, testStatusData] = await Promise.all([
           CourseService.getCourse(parseInt(courseId)),
-          CourseService.getModuleLesson(parseInt(courseId), parseInt(moduleIndex))
+          CourseService.getModuleLesson(parseInt(courseId), parseInt(moduleIndex)),
+          TestService.getTestStatus(parseInt(courseId)).catch(() => ({ has_completed: false, passed_modules: [] }))
         ])
         setCourse(courseData)
         setLesson(lessonData)
+        setTestStatus(testStatusData)
+
+        // Check if test questions exist for this module
+        try {
+          const questions = await TestService.getModuleTestQuestions(parseInt(courseId), parseInt(moduleIndex))
+          setHasTestQuestions(questions.length > 0)
+        } catch {
+          setHasTestQuestions(false)
+        }
+
         return lessonData
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load lesson')
@@ -103,6 +118,7 @@ export default function ModuleLesson() {
   }
 
   const module = course.modules?.[parseInt(moduleIndex!)]
+  const isModuleCompleted = testStatus?.passed_modules.includes(parseInt(moduleIndex!)) || false
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -116,11 +132,30 @@ export default function ModuleLesson() {
       <div className="bg-white border rounded-lg p-8">
         {/* Module Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center size-10 rounded-full bg-primary text-white text-sm font-bold">
-              {parseInt(moduleIndex!) + 1}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center justify-center size-10 rounded-full text-white text-sm font-bold ${
+                isModuleCompleted ? 'bg-green-600' : 'bg-primary'
+              }`}>
+                {parseInt(moduleIndex!) + 1}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">{module?.name}</h1>
+                {isModuleCompleted && (
+                  <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full mt-1 inline-block">
+                    ✓ Completed
+                  </span>
+                )}
+              </div>
             </div>
-            <h1 className="text-3xl font-bold">{module?.name}</h1>
+            {hasTestQuestions && (
+              <Button asChild>
+                <Link to={`/courses/${courseId}/modules/${moduleIndex}/test`}>
+                  <ClipboardCheck className="size-4 mr-2" />
+                  {isModuleCompleted ? 'Retake Test' : 'Take Test'}
+                </Link>
+              </Button>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {course.name} - Module {parseInt(moduleIndex!) + 1}

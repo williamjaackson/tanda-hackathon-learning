@@ -194,11 +194,11 @@ async def get_test_status(course_id: int, user: dict = Depends(verify_access_tok
     """Get user's test completion status for a course"""
     db_pool = get_db_pool()
     async with db_pool.acquire() as connection:
-        # Get the most recent completed test attempt
+        # Get the most recent test attempt (completed or in-progress)
         attempt = await connection.fetchrow(
             """
-            SELECT id FROM user_test_attempts
-            WHERE user_id = $1 AND course_id = $2 AND completed = TRUE
+            SELECT id, completed FROM user_test_attempts
+            WHERE user_id = $1 AND course_id = $2
             ORDER BY created_at DESC
             LIMIT 1
             """,
@@ -238,7 +238,195 @@ async def get_test_status(course_id: int, user: dict = Depends(verify_access_tok
         ]
 
         return {
-            "has_completed": True,
+            "has_completed": attempt['completed'],
             "passed_modules": passed_modules,
             "module_results": module_results
+        }
+
+
+@router.get("/{course_id}/modules/{module_index}/questions")
+async def get_module_test_questions(
+    course_id: int,
+    module_index: int,
+    user: dict = Depends(verify_access_token)
+):
+    """Get all knowledge test questions for a specific module"""
+    db_pool = get_db_pool()
+    async with db_pool.acquire() as connection:
+        # Check if course exists
+        course = await connection.fetchrow(
+            "SELECT id FROM courses WHERE id = $1",
+            course_id
+        )
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        # Fetch questions for this specific module
+        questions = await connection.fetch(
+            """
+            SELECT q.id, q.module_index, q.question_text
+            FROM module_questions q
+            WHERE q.course_id = $1 AND q.module_index = $2
+            ORDER BY q.id
+            """,
+            course_id,
+            module_index
+        )
+
+        result = []
+        for question in questions:
+            # Fetch options for this question
+            options = await connection.fetch(
+                """
+                SELECT option_index, option_text
+                FROM question_options
+                WHERE question_id = $1
+                ORDER BY option_index
+                """,
+                question['id']
+            )
+
+            result.append({
+                "id": question['id'],
+                "module_index": question['module_index'],
+                "question_text": question['question_text'],
+                "options": [opt['option_text'] for opt in options]
+            })
+
+        return result
+
+
+@router.post("/{course_id}/modules/{module_index}/submit")
+async def submit_module_test(
+    course_id: int,
+    module_index: int,
+    submission: TestSubmission,
+    user: dict = Depends(verify_access_token)
+):
+    """Submit test answers for a specific module and get results"""
+    db_pool = get_db_pool()
+    async with db_pool.acquire() as connection:
+        # Get or create active test attempt
+        attempt = await connection.fetchrow(
+            """
+            SELECT id FROM user_test_attempts
+            WHERE user_id = $1 AND course_id = $2 AND completed = FALSE
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            user['user_id'],
+            course_id
+        )
+
+        if not attempt:
+            # Create new attempt if none exists
+            attempt_id = await connection.fetchval(
+                """
+                INSERT INTO user_test_attempts (user_id, course_id, completed)
+                VALUES ($1, $2, FALSE)
+                RETURNING id
+                """,
+                user['user_id'],
+                course_id
+            )
+        else:
+            attempt_id = attempt['id']
+
+        # Delete any existing answers for this module in this attempt
+        await connection.execute(
+            """
+            DELETE FROM user_answers
+            WHERE attempt_id = $1
+            AND question_id IN (
+                SELECT id FROM module_questions
+                WHERE course_id = $2 AND module_index = $3
+            )
+            """,
+            attempt_id,
+            course_id,
+            module_index
+        )
+
+        # Process each answer
+        total_questions = 0
+        correct_answers = 0
+
+        for answer in submission.answers:
+            # Get correct answer for this question
+            question = await connection.fetchrow(
+                """
+                SELECT correct_answer_index, module_index
+                FROM module_questions
+                WHERE id = $1 AND course_id = $2 AND module_index = $3
+                """,
+                answer.question_id,
+                course_id,
+                module_index
+            )
+
+            if not question:
+                continue
+
+            # Check if answer is correct (-1 means "I'm unsure", which is wrong)
+            is_correct = (
+                answer.selected_option_index != -1 and
+                answer.selected_option_index == question['correct_answer_index']
+            )
+
+            # Store the answer
+            await connection.execute(
+                """
+                INSERT INTO user_answers (attempt_id, question_id, selected_option_index, is_correct)
+                VALUES ($1, $2, $3, $4)
+                """,
+                attempt_id,
+                answer.question_id,
+                answer.selected_option_index,
+                is_correct
+            )
+
+            total_questions += 1
+            if is_correct:
+                correct_answers += 1
+
+        # Check if all modules have been completed to mark attempt as completed
+        all_answers = await connection.fetch(
+            """
+            SELECT mq.module_index
+            FROM user_answers ua
+            JOIN module_questions mq ON ua.question_id = mq.id
+            WHERE ua.attempt_id = $1
+            """,
+            attempt_id
+        )
+
+        # Get unique modules answered
+        modules_answered = set(answer['module_index'] for answer in all_answers)
+
+        # Get total modules in course
+        total_modules = await connection.fetchval(
+            """
+            SELECT COUNT(DISTINCT module_index)
+            FROM module_questions
+            WHERE course_id = $1
+            """,
+            course_id
+        )
+
+        # Mark attempt as completed if all modules have been answered
+        if len(modules_answered) >= total_modules:
+            await connection.execute(
+                "UPDATE user_test_attempts SET completed = TRUE WHERE id = $1",
+                attempt_id
+            )
+
+        # Calculate if this module was passed (all questions correct)
+        is_passed = correct_answers == total_questions and total_questions > 0
+
+        return {
+            "attempt_id": attempt_id,
+            "module_index": module_index,
+            "total": total_questions,
+            "correct": correct_answers,
+            "is_passed": is_passed
         }

@@ -8,6 +8,7 @@ import CoursesCreate from './pages/CoursesCreate'
 import CourseDetail from './pages/CourseDetail'
 import CourseTest from './pages/CourseTest'
 import ModuleLesson from './pages/ModuleLesson'
+import ModuleTest from './pages/ModuleTest'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -41,6 +42,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <CourseDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'courses/:courseId/modules/:moduleIndex/test',
+        element: (
+          <ProtectedRoute>
+            <ModuleTest />
           </ProtectedRoute>
         ),
       },
