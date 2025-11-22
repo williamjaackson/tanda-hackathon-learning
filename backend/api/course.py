@@ -65,17 +65,9 @@ async def check_and_generate_modules(course_id: int):
                 course_id
             )
 
-            if not pdfs:
-                await connection.execute(
-                    "UPDATE courses SET modules_status = 'error', modules_error = $1 WHERE id = $2",
-                    "No PDFs to generate modules from",
-                    course_id
-                )
-                print(f"⚠️ Course {course_id}: No PDFs to generate modules from")
-                return
-
         # Generate modules using Claude Sonnet (outside DB connection)
-        pdf_summaries = [{"filename": pdf["filename"], "summary": pdf["summary"]} for pdf in pdfs]
+        # Allow generation even without PDFs - will use course description
+        pdf_summaries = [{"filename": pdf["filename"], "summary": pdf["summary"]} for pdf in pdfs] if pdfs else []
         modules = await generate_course_modules(
             course["name"],
             course["description"] or "",
@@ -170,7 +162,7 @@ async def summarize_single_pdf(pdf_id: int, pdf_bytes: bytes, filename: str, cou
             )
         print(f"✅ Summarized PDF: {filename}")
 
-        # Check if all PDFs are done and generate modules if so
+        # Check if all PDFs are now summarized and trigger module generation if so
         await check_and_generate_modules(course_id)
 
     except Exception as e:
@@ -248,7 +240,12 @@ async def create_course(
 
                 # Schedule summarization in background for this specific PDF
                 background_tasks.add_task(summarize_single_pdf, pdf_id, pdf_bytes, file.filename, course_id)
-
+        
+        # If no PDFs uploaded, trigger module generation immediately
+        # Otherwise, check_and_generate_modules will be called after each PDF is summarized
+        if not files or not any(f.filename and f.filename.endswith('.pdf') for f in files):
+            background_tasks.add_task(check_and_generate_modules, course_id)
+        
         return {"id": course_id}
 
 @router.get("/{course_id}/pdfs")

@@ -27,10 +27,21 @@ async def generate_course_modules(course_name: str, course_description: str, pdf
             if pdf.get('summary')
         ])
 
-        if not pdf_context:
+        # If no PDFs, check if we have a course description to work with
+        if not pdf_context and not course_description:
+            print("❌ No PDFs or course description provided")
             return []
 
         # Generate modules using Claude Sonnet
+        # Build appropriate prompt based on available materials
+        if pdf_context:
+            materials_section = f"""Course Materials:
+{pdf_context}
+
+Please analyze this content and create a learning plan with reasonably-sized modules in a logical linear progression."""
+        else:
+            materials_section = """No course materials provided yet. Please create a comprehensive learning plan based on the course name and description. Design modules that would typically be covered in this type of course, including foundational concepts, intermediate topics, and advanced applications."""
+
         message = await client.messages.create(
             model="claude-sonnet-4-5-20250929",
             max_tokens=4096,
@@ -42,10 +53,7 @@ async def generate_course_modules(course_name: str, course_description: str, pdf
 Course Name: {course_name}
 Course Description: {course_description or "Not provided"}
 
-Course Materials:
-{pdf_context}
-
-Please analyze this content and create a learning plan with reasonably-sized modules in a logical linear progression.
+{materials_section}
 
 RULES:
 1. Create 4-8 modules that build on each other sequentially
